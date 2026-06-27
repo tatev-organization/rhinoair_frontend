@@ -44,6 +44,8 @@ export interface SystemState {
   tons?: number;
   zoned?: boolean;
   zoneCount?: number;
+  singleNest?: boolean;
+  multiNest?: boolean;
   miniId?: string;
   multiCondenserId?: string;
   multiHeads?: Record<string, number>;
@@ -156,9 +158,14 @@ export function addonLineTotal(def: AddonDef, a: AddonState | undefined, systems
 }
 
 export function zoneCost(s: SystemState) {
-  if (!s.zoned) return 0;
+  const nestOk = brandOf(s).nest;
+  if (!s.zoned) {
+    return (nestOk && s.singleNest) ? NEST_RATE : 0;
+  }
   const z = Math.max(s.zoneCount || 2, 2);
-  return 3100 + Math.max(z - 2, 0) * 1500;
+  let t = ZONE_FIRST + Math.max(z - 1, 0) * ZONE_ADDL;
+  if (nestOk && s.multiNest) t += NEST_RATE * z;
+  return t;
 }
 
 export function systemSubtotal(s: SystemState, project: ProjectState, systemsLength: number) {

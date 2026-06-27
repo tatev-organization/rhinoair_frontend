@@ -1,6 +1,6 @@
 import React from 'react';
-import { SystemState, AddonState, ProjectState, isDuctless, systemSubtotal, sysDisplayName, sysSummary } from './calculatorUtils';
-import { BRANDS, BRAND_EFF, MINI_SETS, MULTI_CONDENSER, HEAD_BTU, TON_OPTS, SYSTEM_ADDON_DEFS, SYS_TYPES } from './calculatorData';
+import { SystemState, AddonState, ProjectState, isDuctless, systemSubtotal, sysDisplayName, sysSummary, brandOf } from './calculatorUtils';
+import { BRANDS, BRAND_EFF, MINI_SETS, MULTI_CONDENSER, HEAD_BTU, TON_OPTS, SYSTEM_ADDON_DEFS, SYS_TYPES, ZONE_FIRST, ZONE_ADDL, NEST_RATE } from './calculatorData';
 import AddonItem from './AddonItem';
 import { brandLogoSvg } from './calculatorLogos';
 
@@ -64,22 +64,75 @@ export default function SystemCard({ system, index, project, systemsLength, onCh
 
   // --- Sub-components ---
   const renderZoneConfig = () => {
+    const single = !system.zoned;
+    const nestOk = brandOf(system).nest;
+    const z = Math.max(system.zoneCount || 2, 2);
+    const multiZoneCost = ZONE_FIRST + Math.max(z - 1, 0) * ZONE_ADDL + ((nestOk && system.multiNest) ? NEST_RATE * z : 0);
+
     return (
-      <div className="zone-cfg">
-        <label className="zone-check">
-          <input type="checkbox" checked={!!system.zoned} onChange={e => update({ zoned: e.target.checked })} />
-          <span>Is this a zoned system?</span>
-        </label>
-        {system.zoned && (
-          <div className="zone-details">
-            <span className="zd-label">Number of zones</span>
-            <div className="stepper">
-              <button type="button" className="dec" onClick={() => update({ zoneCount: Math.max((system.zoneCount || 2) - 1, 2) })}>−</button>
-              <input type="number" className="qty" value={system.zoneCount || 2} min="2" onChange={e => update({ zoneCount: Math.max(parseInt(e.target.value)||2, 2) })} />
-              <button type="button" className="inc" onClick={() => update({ zoneCount: (system.zoneCount || 2) + 1 })}>+</button>
+      <div className="zone-mode">
+        <div className="zm-label">Zone configuration</div>
+        <div className="zone-seg-row">
+          <button type="button" className={`zone-seg ${single ? 'active' : ''}`} onClick={() => update({ zoned: false })}>
+            <div className="zs-ttl">Single Zone</div>
+            <div className="zs-sub">included in base</div>
+          </button>
+          <button type="button" className={`zone-seg ${!single ? 'active' : ''}`} onClick={() => update({ zoned: true })}>
+            <div className="zs-ttl">Multi-Zone Damper System</div>
+            <div className="zs-sub">from $3,100 (2 zones)</div>
+          </button>
+        </div>
+
+        <div className={`zone-panel zone-single ${single ? '' : 'hidden'}`}>
+          {nestOk && (
+            <div className={`addon ${system.singleNest ? 'on' : ''}`}>
+              <div className="addon-head">
+                <div className="addon-info">
+                  <div className="name">Google Nest (4th Gen) or Equal</div>
+                  <div className="desc">High-end smart thermostat upgrade from the included standard thermostat (1 per system).</div>
+                </div>
+                <span className="addon-price-tag">${NEST_RATE}</span>
+                <label className="switch">
+                  <input type="checkbox" checked={!!system.singleNest} onChange={e => update({ singleNest: e.target.checked })} />
+                  <span className="slider"></span>
+                </label>
+              </div>
             </div>
+          )}
+        </div>
+
+        <div className={`zone-panel zone-multi ${single ? 'hidden' : ''}`}>
+          <div className="addon on" data-zonemulti="1">
+            <div className="addon-head">
+              <div className="addon-info">
+                <div className="name">Multi-Zone Damper System</div>
+                <div className="desc">First 2 zones $3,100, then $600 per additional zone (standard thermostats included).</div>
+              </div>
+              <span className="addon-price-tag">from $3,100 + $600/zone</span>
+            </div>
+            <div className="qty-area">
+              <span className="qty-label">Number of zones</span>
+              <div className="stepper zones-step">
+                <button type="button" className="dec" onClick={() => update({ zoneCount: Math.max((system.zoneCount || 2) - 1, 2) })}>−</button>
+                <input type="number" className="zones-input qty" value={z} min="2" onChange={e => update({ zoneCount: Math.max(parseInt(e.target.value) || 2, 2) })} />
+                <button type="button" className="inc" onClick={() => update({ zoneCount: (system.zoneCount || 2) + 1 })}>+</button>
+              </div>
+              <span className="qty-line-total zones-total">{formatPrice(multiZoneCost)}</span>
+            </div>
+            {nestOk && (
+              <div className="nest-sub">
+                <div className="nest-sub-info">
+                  <div className="nest-sub-label">Upgrade to Google Nest (4th Gen) or Equal thermostats?</div>
+                  <div className="nest-sub-hint">${NEST_RATE} per zone · 1 per zone (replaces standard)</div>
+                </div>
+                <label className="switch">
+                  <input type="checkbox" checked={!!system.multiNest} onChange={e => update({ multiNest: e.target.checked })} />
+                  <span className="slider"></span>
+                </label>
+              </div>
+            )}
           </div>
-        )}
+        </div>
       </div>
     );
   };
