@@ -1,6 +1,6 @@
 import React from 'react';
-import { SystemState, AddonState, ProjectState, isDuctless, systemSubtotal, sysDisplayName, sysSummary, brandOf } from './calculatorUtils';
-import { BRANDS, BRAND_EFF, MINI_SETS, MULTI_CONDENSER, HEAD_BTU, TON_OPTS, SYSTEM_ADDON_DEFS, SYS_TYPES, ZONE_FIRST, ZONE_ADDL, NEST_RATE } from './calculatorData';
+import { SystemState, AddonState, ProjectState, isDuctless, systemSubtotal, sysDisplayName, sysSummary, brandOf, miniTierMult, Head, headsTotal, multiCondenserPrice, getAutoCondenser, miniPriceFor, ductlessCfg } from './calculatorUtils';
+import { BRANDS, BRAND_EFF, HEAD_BTU, TON_OPTS, SYSTEM_ADDON_DEFS, SYS_TYPES, ZONE_FIRST, ZONE_ADDL, NEST_RATE, MULTI_HEAD, HEAD_TYPES, MINI_BTU_ORDER } from './calculatorData';
 import AddonItem from './AddonItem';
 import { brandLogoSvg } from './calculatorLogos';
 
@@ -14,8 +14,27 @@ interface SystemCardProps {
 }
 
 export default function SystemCard({ system, index, project, systemsLength, onChange, onRemove }: SystemCardProps) {
-  const update = (changes: Partial<SystemState>) => onChange({ ...system, ...changes });
+  const update = (changes: Partial<SystemState>) => {
+    onChange({ ...system, ...changes });
+  };
 
+  const handleSysTypeChange = (t: string) => {
+    if (t === system.sysType) return;
+    const newHeads = [...(system.heads || [])];
+    if (t === 'mini') {
+      if (!newHeads.length) newHeads.push({ id: Date.now(), type: 'wall', btu: '9k', name: '' });
+      newHeads.splice(1); // keep exactly 1
+    } else if (t === 'multi') {
+      if (!newHeads.length) {
+        newHeads.push({ id: Date.now(), type: 'wall', btu: '9k', name: '' });
+        newHeads.push({ id: Date.now() + 1, type: 'wall', btu: '9k', name: '' });
+      } else if (newHeads.length < 2) {
+        newHeads.push({ id: Date.now() + 1, type: 'wall', btu: '9k', name: '' });
+      }
+    }
+    update({ sysType: t, heads: newHeads });
+  }; 
+  
   const formatPrice = (n: number) => '$' + Math.round(n).toLocaleString('en-US');
 
   // --- Header ---
@@ -59,7 +78,7 @@ export default function SystemCard({ system, index, project, systemsLength, onCh
   const commonDefs = visibleNonIaq.filter(d => COMMON_ADDONS.has(d.id));
   const moreDefs = visibleNonIaq.filter(d => MORE_ADDONS.includes(d.id));
   const moreSel = moreDefs.filter(d => system.addons[d.id]?.on).length;
-  const iaqDefs = SYSTEM_ADDON_DEFS.filter(d => d.group === 'airquality');
+  const iaqDefs = SYSTEM_ADDON_DEFS.filter(d => d.group === 'airquality' && (!ductless || d.ductlessOk));
   const iaqSel = iaqDefs.filter(d => system.addons[d.id]?.on).length;
 
   // --- Sub-components ---
@@ -138,16 +157,42 @@ export default function SystemCard({ system, index, project, systemsLength, onCh
   };
 
   const renderMiniBuilder = () => {
-    const opts = MINI_SETS.filter(m => m.brand === system.brand);
-    if (!opts.length) return null;
+    const cfg = ductlessCfg(system);
+    const h = (system.heads && system.heads[0]) || { id: 1, type: 'wall', btu: '9k' } as Head;
+    const currentHeadType = h.type || 'wall';
+    const currentBtuId = system.miniId?.split('_')[1] || '12k';
+
     return (
       <>
-        <div className="sub-label">System capacity</div>
+        <div className="sub-label">
+          Capacity (BTU) <span className="sl-note"> · {activeBrand?.name} · {cfg.seer2} · {cfg.warrantyFull}</span>
+        </div>
+        <div className="ton-grid tonnage">
+          {MINI_BTU_ORDER.map(btuId => {
+            const price = miniPriceFor(system.brand, btuId, currentHeadType, project.tier);
+            const bNum = HEAD_BTU.find(x => x.id === btuId);
+            const label = bNum ? bNum.name.replace(' BTU', '') : btuId;
+            const isActive = currentBtuId === btuId;
+            return (
+              <button key={btuId} type="button" className={`opt ton ${isActive ? 'active' : ''}`}
+                onClick={() => update({ miniId: `${system.brand}_${btuId}` })}>
+                <div className="ttl">{label} BTU</div>
+                <div className="price-hint">{formatPrice(price)}</div>
+              </button>
+            );
+          })}
+        </div>
+        <div className="sub-label">Indoor head type</div>
         <div className="minihead-row">
-          {opts.map(m => (
-            <button key={m.id} type="button" className={`minihead-seg ${system.miniId === m.id ? 'active' : ''}`} onClick={() => update({ miniId: m.id })}>
-              <span>{m.name}</span>
-              <span className="mh-add">{formatPrice(m.price)}</span>
+          {HEAD_TYPES.map(t => (
+            <button key={t.id} type="button" className={`minihead-seg ${currentHeadType === t.id ? 'active' : ''}`}
+              onClick={() => {
+                const newHeads = [...(system.heads || [{ id: 1, type: 'wall', btu: '9k', name: '' }])];
+                if (!newHeads[0]) newHeads[0] = { id: Date.now(), type: t.id, btu: currentBtuId, name: '' };
+                else newHeads[0] = { ...newHeads[0], type: t.id };
+                update({ heads: newHeads });
+              }}>
+              {t.name}
             </button>
           ))}
         </div>
@@ -158,46 +203,96 @@ export default function SystemCard({ system, index, project, systemsLength, onCh
   const renderMultiBuilder = () => {
     const b = activeBrand;
     if (!b || !b.multi) return <div className="muted">Multi-split not available for this brand.</div>;
-    const headRate = b.multiCondRate || 0;
-    const rateTxt = headRate > 0 ? `$${headRate.toLocaleString('en-US')} ea` : 'Price TBD';
+
+    const tbl = MULTI_HEAD[system.brand] || MULTI_HEAD.goodman;
+    const projectTierMult = miniTierMult(project.tier);
+    const heads = system.heads || [];
+
+    const condenserAmt = multiCondenserPrice(system, project.tier);
+    const hTotal = headsTotal(system, project.tier);
+    const msTotal = condenserAmt + hTotal;
+
+    const autoCondenser = getAutoCondenser(system);
+    const cfg = ductlessCfg(system);
+    const condLabel = `${b.name} multi-zone condenser`;
+    const condSub = autoCondenser
+      ? `${Math.round(autoCondenser.max / 1000)}k BTU total · ${cfg.seer2} · ${cfg.warrantyFull}`
+      : `${cfg.seer2} · ${cfg.warrantyFull}`;
+
+    const canAdd = heads.length < 5;
+
     return (
       <>
-        <div className="sub-label">Condenser capacity</div>
-        <div>
-          {MULTI_CONDENSER.filter(c => c.brand === system.brand).map(c => (
-            <button key={c.id} type="button" className={`cond-row ${system.multiCondenserId === c.id ? 'active' : ''}`} onClick={() => update({ multiCondenserId: c.id })}>
-              <div className="cond-info">
-                <div className="cond-name">{c.name}</div>
-                <div className="cond-sub">{c.ports} ports · up to {Math.round(c.max / 1000)}k BTU</div>
-              </div>
-              <span className="cond-price-sm">{formatPrice(c.price)}</span>
-            </button>
-          ))}
+        <div className="ms-total">
+          <div className="ms-total-label">
+            Multi-Split system total
+            <span className="ms-total-sub">condenser + {heads.length} head{heads.length !== 1 ? 's' : ''}</span>
+          </div>
+          <div className="ms-total-val">{formatPrice(msTotal)}</div>
         </div>
-        <div className="heads-head">
-          <div className="sub-label">Indoor heads</div>
+        <div className="sub-label">Outdoor condenser</div>
+        <div className="cond-row">
+          <div className="cond-info">
+            <div className="cond-name">{condLabel}</div>
+            <div className="cond-sub">{condSub}</div>
+          </div>
+          <div className="cond-incl">Included</div>
         </div>
+        <div className="sub-label">Indoor heads ({heads.length})</div>
         <div className="heads-list">
-          {HEAD_BTU.map(h => {
-            const qty = system.multiHeads?.[h.id] || 0;
+          {heads.map((h, i) => {
+            const baseRate = tbl[h.btu] || 0;
+            const adder = HEAD_TYPES.find(x => x.id === h.type)?.adder || 0;
+            const headRate = Math.round(((baseRate + adder) * projectTierMult) / 10) * 10;
+
             return (
               <div key={h.id} className="head-row">
                 <div className="head-row-top">
-                  <div className="head-label">{h.name}</div>
-                  <div className="head-row-right">
-                    <span className="head-price">{formatPrice(qty * headRate)}</span>
-                  </div>
+                  <span className="head-label">
+                    Head {i + 1}{h.name ? <> · <span className="head-name-disp">{h.name}</span></> : ''}
+                  </span>
+                  <span className="head-row-right">
+                    <span className="head-price">{formatPrice(headRate)}</span>
+                    {heads.length > 1 && (
+                      <button type="button" className="head-remove" title="Remove head" onClick={() => update({ heads: heads.filter(x => x.id !== h.id) })}>✕</button>
+                    )}
+                  </span>
                 </div>
-                <div className="stepper mr-step">
-                  <button type="button" className="dec" onClick={() => update({ multiHeads: { ...system.multiHeads, [h.id]: Math.max(qty - 1, 0) } })}>−</button>
-                  <input type="number" className="qty" value={qty} min="0" onChange={e => update({ multiHeads: { ...system.multiHeads, [h.id]: Math.max(parseInt(e.target.value)||0, 0) } })} />
-                  <button type="button" className="inc" onClick={() => update({ multiHeads: { ...system.multiHeads, [h.id]: qty + 1 } })}>+</button>
+                <input type="text" className="head-name-input" placeholder="Room / location (optional) — e.g. Living Room" value={h.name || ''} onChange={e => {
+                  const newHeads = [...heads];
+                  newHeads[i] = { ...h, name: e.target.value };
+                  update({ heads: newHeads });
+                }} />
+                <div className="head-selects">
+                  <select className="head-type" value={h.type} onChange={e => {
+                    const newHeads = [...heads];
+                    newHeads[i] = { ...h, type: e.target.value };
+                    update({ heads: newHeads });
+                  }}>
+                    {HEAD_TYPES.map(t => (
+                      <option key={t.id} value={t.id}>{t.name}</option>
+                    ))}
+                  </select>
+                  <select className="head-btu" value={h.btu} onChange={e => {
+                    const newHeads = [...heads];
+                    newHeads[i] = { ...h, btu: e.target.value };
+                    update({ heads: newHeads });
+                  }}>
+                    {HEAD_BTU.map(t => (
+                      <option key={t.id} value={t.id}>{t.name}</option>
+                    ))}
+                  </select>
                 </div>
-                <div className="cond-info"><div className="cond-sub">{rateTxt}</div></div>
               </div>
             );
           })}
         </div>
+        {canAdd
+          ? <button type="button" className="add-head-btn add-head-full" onClick={() => update({ heads: [...heads, { id: Date.now(), type: 'wall', btu: '9k', name: '' }] })}>
+              <span>+</span> Add another head
+            </button>
+          : <div className="heads-max-note">Maximum 5 zones reached</div>
+        }
       </>
     );
   };
@@ -222,7 +317,7 @@ export default function SystemCard({ system, index, project, systemsLength, onCh
         <div className="sub-label">System type</div>
         <div className="systype-row">
           {types.map(t => (
-            <button key={t.id} type="button" className={`systype-seg ${system.sysType === t.id ? 'active' : ''}`} onClick={() => update({ sysType: t.id as any })}>
+            <button key={t.id} type="button" className={`systype-seg ${system.sysType === t.id ? 'active' : ''}`} onClick={() => handleSysTypeChange(t.id)}>
               <div className="st-ic">{t.icon}</div>
               <div className="st-name">{t.name}</div>
               <div className="st-sub">{t.sub}</div>
@@ -305,12 +400,12 @@ export default function SystemCard({ system, index, project, systemsLength, onCh
         )}
 
         {/* Air Quality Group */}
-        {!ductless && (
+        {iaqDefs.length > 0 && (
           <div className={`aq-group ${system.aqOpen ? 'open' : ''}`}>
             <button type="button" className="aq-head" onClick={() => update({ aqOpen: !system.aqOpen })}>
               <div className="aq-head-info">
                 <div className="aq-title">Air Quality</div>
-                <div className="aq-sub">{iaqSel ? `${iaqSel} selected` : `${iaqDefs.length} options`}</div>
+                <div className="aq-sub">{iaqSel > 0 ? `${iaqSel} selected` : `${iaqDefs.length} option${iaqDefs.length !== 1 ? 's' : ''}`}</div>
               </div>
               <span className="aq-chev">▾</span>
             </button>

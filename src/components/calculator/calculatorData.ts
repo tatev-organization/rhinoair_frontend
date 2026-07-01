@@ -16,6 +16,7 @@ export interface AddonDef {
   group?: string;
   note?: string;
   common?: boolean;
+  ductlessOk?: boolean;
 }
 
 export const SYSTEM_ADDON_DEFS: AddonDef[] = [
@@ -26,10 +27,10 @@ export const SYSTEM_ADDON_DEFS: AddonDef[] = [
   { id: 'curb', name: 'Rooftop Condenser Platform / Curb', shortName: 'Curb', desc: 'Elevated platform or curb for rooftop condenser placement.', type: 'flat', rate: 550, tag: '$550 / system' },
   { id: 'hers', name: 'HERS Duct Leakage Test', shortName: 'HERS Duct', desc: 'Title 24 HERS duct leakage verification for this system.', type: 'flat', rate: 300, tag: '$300 / system' },
   { id: 'hersfinal', name: 'HERS Test Final', shortName: 'HERS Final', desc: 'Title 24 HERS final verification for this system.', type: 'flat', rate: 350, tag: '$350 / system' },
-  { id: 'airscrubber', group: 'airquality', name: 'Air Scrubber', shortName: 'Air Scrubber', desc: 'Whole-home active air purification — reduces mold, bacteria, viruses, odors, and airborne contaminants throughout the living space.', type: 'flat', rate: 650, tag: '$650 / system' },
+  { id: 'airscrubber', group: 'airquality', ductlessOk: true, name: 'Air Scrubber', shortName: 'Air Scrubber', desc: 'Whole-home active air purification — reduces mold, bacteria, viruses, odors, and airborne contaminants throughout the living space.', type: 'flat', rate: 650, tag: '$650 / system' },
   { id: 'airpurifier', group: 'airquality', name: 'Whole-System Air Purifier', shortName: 'Air Purifier', desc: 'Advanced media filtration that captures particles, allergens, and dust.', type: 'flat', rate: 650, tag: '$650 / system' },
-  { id: 'erv', group: 'airquality', name: 'ERV System (Energy Recovery Ventilator)', shortName: 'ERV', desc: 'Brings in fresh outdoor air/oxygen while recovering energy from outgoing air — improves indoor air quality and efficiency.', type: 'flat', rate: 3500, tag: '$3,500 / system' },
-  { id: 'uvcoil', group: 'airquality', name: 'UV Coil Cleaner', shortName: 'UV Coil', desc: 'UV-C light at the evaporator coil that continuously controls mold and biofilm, keeping the coil clean and airflow efficient.', type: 'flat', rate: 450, tag: '$450 / system' },
+  { id: 'erv', group: 'airquality', ductlessOk: true, name: 'ERV System (Energy Recovery Ventilator)', shortName: 'ERV', desc: 'Brings in fresh outdoor air/oxygen while recovering energy from outgoing air — improves indoor air quality and efficiency.', type: 'flat', rate: 3500, tag: '$3,500 / system' },
+  { id: 'uvcoil', group: 'airquality', ductlessOk: true, name: 'UV Coil Cleaner', shortName: 'UV Coil', desc: 'UV-C light at the evaporator coil that continuously controls mold and biofilm, keeping the coil clean and airflow efficient.', type: 'flat', rate: 450, tag: '$450 / system' },
   { id: 'humidifier', group: 'airquality', name: 'Humidifier', shortName: 'Humidifier', desc: 'Whole-house humidifier that adds moisture to dry indoor air for added comfort.', type: 'flat', rate: 900, tag: '$900 / system' },
 ];
 

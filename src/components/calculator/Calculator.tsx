@@ -12,14 +12,15 @@ import './calculator.css';
 const newSystem = (id: number): SystemState => ({
   id: id,
   sysType: 'ducted',
-  brand: 'goodman',
+  brand: 'acpro',
   tier: 'standard',
-  tons: 5.0,
+  tons: 5,
   addons: {},
   notes: '',
-  miniId: 'goodman_12k',
-  multiCondenserId: 'goodman_24k',
+  miniId: 'acpro_12k',
+  multiCondenserId: '',
   multiHeads: {},
+  heads: [{ id: 1, type: 'wall', btu: '12k', name: '' }],
 });
 
 const defaultProject: ProjectState = {
@@ -71,6 +72,21 @@ export default function Calculator() {
       newSystems.splice(index, 1);
       setSystems(newSystems);
     }
+  };
+
+  const handleReset = () => {
+    const quoteDate = new Date();
+    const expiry = new Date();
+    expiry.setDate(expiry.getDate() + 30);
+    const dateOptions: Intl.DateTimeFormatOptions = { month: 'long', day: 'numeric', year: 'numeric' };
+    setProject({
+      ...defaultProject,
+      quoteNumber: `RA-${Math.floor(100000 + Math.random() * 900000)}`,
+      quoteDate: quoteDate.toLocaleDateString('en-US', dateOptions),
+      quoteExpiry: expiry.toLocaleDateString('en-US', dateOptions),
+    });
+    setSystems([newSystem(Date.now())]);
+    setNextSysId(Date.now() + 1);
   };
 
   const anyDuctless = systems.some(s => s.sysType === 'mini' || s.sysType === 'multi');
@@ -210,9 +226,7 @@ export default function Calculator() {
             </div>
           </div>
 
-          <div>
-            <EstimatePanel project={project} systems={systems} onOpenConfirm={() => setShowConfirm(true)} />
-          </div>
+          <EstimatePanel project={project} systems={systems} onOpenConfirm={() => setShowConfirm(true)} onReset={handleReset} />
         </div>
       </div>
 
@@ -222,6 +236,10 @@ export default function Calculator() {
         project={project}
         systems={systems}
         onConfirm={() => setProject({ ...project, confirmedOnce: true })}
+        onPrint={() => {
+          const btn = document.getElementById('panelPrintBtn') as HTMLButtonElement | null;
+          btn?.click();
+        }}
       />
       <div id="printDoc" aria-hidden="true"></div>
     </div>

@@ -49,6 +49,7 @@ export interface SystemState {
   miniId?: string;
   multiCondenserId?: string;
   multiHeads?: Record<string, number>;
+  heads?: Head[];
   collapsed?: boolean;
   aqOpen?: boolean;
   moreOpen?: boolean;
@@ -80,36 +81,55 @@ export function miniTierMult(projectTier: number) {
   return (TIER_ANCHORS[projectTier] || TIER_ANCHORS[4]) / TIER_ANCHORS[4];
 }
 
+// Price for a mini-split set: scale wall base by tier, round to $10, then add flat head-type adder
+// (adder is flat across tiers — matches the HTML's miniPriceFor logic exactly)
+export function miniPriceFor(brandId: string, btuId: string, headType: string, projectTier: number) {
+  const m = MINI_SETS.find(x => x.brand === brandId && x.btuId === btuId);
+  const basePrice = m?.price || 0;
+  const wallScaled = Math.round(basePrice * miniTierMult(projectTier) / 10) * 10;
+  return wallScaled + (MINI_HEAD_ADDER[headType] || 0);
+}
+
 export function miniSetPrice(s: SystemState, projectTier: number) {
-  const m = MINI_SETS.find(x => x.id === s.miniId);
-  if (!m) return 0;
-  return Math.round(m.price * miniTierMult(projectTier) / 10) * 10;
+  const btuId = miniBtuLabel(s);
+  const headType = s.heads?.[0]?.type || 'wall';
+  return miniPriceFor(s.brand, btuId, headType, projectTier);
 }
 
 export function totalHeadBtu(s: SystemState) {
   let btu = 0;
-  for (const [headId, qty] of Object.entries(s.multiHeads || {})) {
-    const h = HEAD_BTU.find(x => x.id === headId);
-    if (h) btu += h.btu * qty;
+  for (const h of s.heads || []) {
+    const b = HEAD_BTU.find(x => x.id === h.btu);
+    if (b) btu += b.btu;
   }
   return btu;
 }
 
+// Auto-select condenser bracket by total head BTU — no user choice, matches the HTML exactly
 export function multiCondenserPrice(s: SystemState, projectTier: number) {
-  const c = MULTI_CONDENSER.find(x => x.id === s.multiCondenserId);
+  const brackets = MULTI_CONDENSER.filter(x => x.brand === s.brand);
+  const total = totalHeadBtu(s);
+  const c = brackets.find(b => total <= b.max) || brackets[brackets.length - 1];
   if (!c) return 0;
   return Math.round(c.price * miniTierMult(projectTier) / 10) * 10;
 }
 
+// Returns the auto-selected condenser for a multi-split system
+export function getAutoCondenser(s: SystemState) {
+  const brackets = MULTI_CONDENSER.filter(x => x.brand === s.brand);
+  const total = totalHeadBtu(s);
+  return brackets.find(b => total <= b.max) || brackets[brackets.length - 1];
+}
+
 export function headsTotal(s: SystemState, projectTier: number) {
   let total = 0;
-  for (const [headId, qty] of Object.entries(s.multiHeads || {})) {
-    const h = HEAD_BTU.find(x => x.id === headId);
-    if (!h) continue;
+  for (const h of s.heads || []) {
     const tbl = MULTI_HEAD[s.brand] || MULTI_HEAD.goodman;
-    const base = tbl[headId] || 0;
+    const base = tbl[h.btu] || 0;
+    // Scale only the BTU base by tier multiplier; head-type adder is FLAT across tiers
     const btuScaled = Math.round(base * miniTierMult(projectTier) / 10) * 10;
-    total += btuScaled * qty;
+    const adder = MINI_HEAD_ADDER[h.type] || 0;
+    total += btuScaled + adder;
   }
   return total;
 }
@@ -213,7 +233,7 @@ export function sysSummary(s: SystemState) {
     return parts.join(' · ');
   }
   if (s.sysType === 'multi') {
-    const n = Object.values(s.multiHeads || {}).reduce((sum, q) => sum + q, 0);
+    const n = (s.heads || []).length;
     const parts = [brandOf(s).name, `Multi-Split · ${n} head${n !== 1 ? 's' : ''}`];
     SYSTEM_ADDON_DEFS.forEach(def => { const a = s.addons[def.id]; if (a && a.on) { parts.push(def.shortName || def.name); } });
     return parts.join(' · ');
@@ -229,4 +249,9 @@ export function sysSummary(s: SystemState) {
 export function multiCondenserBracketLabel(s: SystemState) {
   const total = totalHeadBtu(s);
   return `${Math.round(total / 1000)}k BTU total`;
+}
+
+export function miniHeadTypeName(s: SystemState) {
+  const t = HEAD_TYPES.find(x => x.id === (s.heads?.[0]?.type || 'wall'));
+  return t ? t.name : 'Wall-Mounted';
 }

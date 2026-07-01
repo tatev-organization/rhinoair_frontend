@@ -245,7 +245,7 @@
   .seg-area.hidden { display:none; }
   .seg-label { font-family:'Sometype Mono',monospace; font-size:11px; text-transform:uppercase; letter-spacing:0.08em; color:var(--muted); margin-bottom:10px; }
   .seg-row { display:flex; gap:10px; }
-  .seg { flex:1; border:2px solid var(--line); background:var(--paper); border-radius:9px; padding:11px 12px; cursor:pointer; transition:0.14s; text-align:left; }
+  .seg { flex:1; border:2px solid var(--line); background:var(--paper); border-radius:9px; padding:11px 12px; cursor:pointer; transition:0.14s; text-align:left; display:flex; flex-direction:column; align-items:flex-start; justify-content:center; }
   .seg:hover { border-color:var(--rhino); }
   .seg.active { border-color:var(--ink); background:var(--ink); color:var(--paper); }
   .seg .seg-ttl { font-weight:800; font-size:14px; }

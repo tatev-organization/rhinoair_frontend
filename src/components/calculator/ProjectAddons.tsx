@@ -15,9 +15,9 @@ export default function ProjectAddons({ project, onChange }: ProjectAddonsProps)
     onChange({ ...project, addons: { ...project.addons, [addonId]: val } });
   };
 
-  const selCount = PROJECT_ADDON_DEFS.filter(d => project.addons[d.id]?.on).length;
   const commonDefs = PROJECT_ADDON_DEFS.filter(def => def.common);
   const moreDefs = PROJECT_ADDON_DEFS.filter(def => !def.common);
+  const selCount = moreDefs.filter(d => project.addons[d.id]?.on).length;
 
   return (
     <>

@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
-import { ProjectState, SystemState, baseForSystem, systemSubtotal, addonLineTotal } from './calculatorUtils';
-import { BRANDS, BRAND_EFF, MULTI_CONDENSER, MINI_SETS, SYSTEM_ADDON_DEFS, PROJECT_ADDON_DEFS } from './calculatorData';
+import { ProjectState, SystemState, baseForSystem, systemSubtotal, addonLineTotal, headsTotal, multiCondenserBracketLabel, isDuctless, miniBtuLabel, miniHeadTypeName } from './calculatorUtils';
+import { BRANDS, BRAND_EFF, SYSTEM_ADDON_DEFS, PROJECT_ADDON_DEFS, ZONE_FIRST, ZONE_ADDL, NEST_RATE } from './calculatorData';
 
 interface ConfirmModalProps {
   show: boolean;
@@ -8,9 +8,10 @@ interface ConfirmModalProps {
   project: ProjectState;
   systems: SystemState[];
   onConfirm: () => void;
+  onPrint: () => void;
 }
 
-export default function ConfirmModal({ show, onClose, project, systems, onConfirm }: ConfirmModalProps) {
+export default function ConfirmModal({ show, onClose, project, systems, onConfirm, onPrint }: ConfirmModalProps) {
   const [submitted, setSubmitted] = useState(false);
 
   if (!show) return null;
@@ -25,12 +26,11 @@ export default function ConfirmModal({ show, onClose, project, systems, onConfir
     const brand = getBrand(s);
 
     if (s.sysType === 'mini') {
-      const mSet = MINI_SETS.find(m => m.id === s.miniId);
-      lines.push({ item: `${brand.name} ${mSet?.name || 'Mini-Split'} system`, amount: base });
+      lines.push({ item: `${brand.name} ${miniBtuLabel(s)} mini-split system (${miniHeadTypeName(s)})`, amount: base });
     } else if (s.sysType === 'multi') {
-      const c = MULTI_CONDENSER.find(x => x.id === s.multiCondenserId);
-      const headsCount = Object.values(s.multiHeads || {}).reduce((sum, qty) => sum + qty, 0);
-      lines.push({ item: `${brand.name} Multi-Split system (${c?.name} · ${headsCount} heads)`, amount: base });
+      const headsCount = (s.heads || []).length;
+      const hTotal = headsTotal(s, project.tier);
+      lines.push({ item: `${brand.name} Multi-Split system (${multiCondenserBracketLabel(s)} · ${headsCount} head${headsCount !== 1 ? 's' : ''})`, amount: base + hTotal });
     } else {
       lines.push({ item: `${brand.name} ${s.tons}-ton base`, amount: base });
       const effLevels = BRAND_EFF[s.brand] || BRAND_EFF.goodman;
@@ -38,19 +38,23 @@ export default function ConfirmModal({ show, onClose, project, systems, onConfir
       if (eff && eff.delta > 0) {
         lines.push({ item: `${eff.name} efficiency upgrade (${eff.desc})`, amount: eff.delta });
       }
+      const nestOk = brand.nest;
+      if (!s.zoned && nestOk && s.singleNest) {
+        lines.push({ item: 'Google Nest (4th Gen) or Equal', amount: NEST_RATE });
+      }
       if (s.zoned) {
         const z = Math.max(s.zoneCount || 2, 2);
-        const zc = 3100 + Math.max(z - 2, 0) * 1500;
-        const addlTxt = z > 2 ? ` + ${z - 2}×$1,500` : '';
-        lines.push({ item: `Multi-Zone Damper System (${z} zones · $3,100${addlTxt})`, amount: zc });
+        const showNest = nestOk && s.multiNest;
+        const zc = ZONE_FIRST + Math.max(z - 1, 0) * ZONE_ADDL + (showNest ? NEST_RATE * z : 0);
+        lines.push({ item: `Multi-Zone Damper System (${z} zones)${showNest ? ' + Nest' : ''}`, amount: zc });
       }
     }
 
     SYSTEM_ADDON_DEFS.forEach(def => {
       const a = s.addons[def.id];
       if (!a || !a.on) return;
-      if (s.sysType !== 'ducted' && ['furnace', 'curb', 'hers', 'hersfinal'].includes(def.id)) return;
-      if (def.group === 'airquality' && s.sysType !== 'ducted') return;
+      if (isDuctless(s) && ['furnace', 'curb', 'hers', 'hersfinal'].includes(def.id)) return;
+      if (def.group === 'airquality' && isDuctless(s) && !def.ductlessOk) return;
       
       let sl = '';
       if (def.type === 'qty') {
@@ -62,7 +66,7 @@ export default function ConfirmModal({ show, onClose, project, systems, onConfir
         sl = def.rows?.filter(r => (a.rows?.[r.key] || 0) > 0).map(r => `${a.rows![r.key]}× ${r.label}`).join(', ') || '';
       }
 
-      const lt = addonLineTotal(def, a, systems.length);
+      const lt = addonLineTotal(def, a, systems.length, s);
       lines.push({ item: def.name + (sl ? ` (${sl})` : ''), amount: lt });
     });
 
@@ -176,7 +180,7 @@ export default function ConfirmModal({ show, onClose, project, systems, onConfir
           </div>
           <div className="cs-revised" id="csRevised">{project.revisedFrom}</div>
           <div className="cs-actions">
-            <button type="button" className="btn btn-primary" onClick={() => window.print()} id="printConfirmBtn">Print / Save Confirmation</button>
+            <button type="button" className="btn btn-primary" id="printConfirmBtn" onClick={onPrint}>Print / Save Confirmation</button>
             <button type="button" className="btn btn-ghost" onClick={handleEdit} id="confirmEditBtn">Edit Quote</button>
           </div>
         </div>
