@@ -25,6 +25,8 @@ export interface Head {
   name?: string;
   type: string;
   btu: string;
+  // Per-head air-handler add-ons (only applicable to concealed/ducted heads on multi-split)
+  aq?: Record<string, boolean>;
 }
 
 export interface AddonState {
@@ -142,6 +144,64 @@ export function isDuctless(s: SystemState) {
   return s.sysType === 'mini' || s.sysType === 'multi';
 }
 
+// Air-handler add-ons (ERV / UV Coil / Air Scrubber) attach to an air handler.
+// In calculator-9: ducted uses system-level AQ group; mini shows ductlessOk AQ only if concealed;
+// multi has NO system-level AQ — extras live per concealed head (h.aq).
+export function headExtraDefs() {
+  return SYSTEM_ADDON_DEFS.filter(d => d.group === 'airquality' && d.ductlessOk);
+}
+
+export function headExtrasCost(h: Head | undefined) {
+  if (!h || h.type !== 'concealed' || !h.aq) return 0;
+  return headExtraDefs().reduce((t, d) => t + (h.aq?.[d.id] ? (d.rate || 0) : 0), 0);
+}
+
+export function sysHeadExtras(s: SystemState) {
+  return (s.heads || []).reduce((t, h) => t + headExtrasCost(h), 0);
+}
+
+export function hasConcealedHead(s: SystemState) {
+  if (s.sysType === 'mini') return (s.heads?.[0]?.type || 'wall') === 'concealed';
+  if (s.sysType === 'multi') return (s.heads || []).some(h => h.type === 'concealed');
+  return false;
+}
+
+// Clears any AQ state that no longer applies (calculator-9 normalizeAq()).
+export function normalizeAqForSystem(s: SystemState): SystemState {
+  // Always ensure heads exist in expected shapes
+  const heads = (s.heads || []).map(h => ({ ...h })) as Head[];
+
+  // Helper to clear system-level airquality add-ons
+  const clearedAddons = { ...s.addons };
+  const clearSystemAq = () => {
+    SYSTEM_ADDON_DEFS.filter(d => d.group === 'airquality').forEach(d => {
+      if (clearedAddons[d.id]) clearedAddons[d.id] = { on: false };
+    });
+  };
+
+  if (s.sysType === 'ducted') {
+    // Ducted keeps system-level AQ group; no per-head AQ
+    heads.forEach(h => { if (h.aq) delete h.aq; });
+    return { ...s, heads, addons: clearedAddons };
+  }
+
+  if (s.sysType === 'mini') {
+    // Mini: system-level AQ only when concealed; otherwise clear it
+    heads.splice(1); // ensure single head
+    heads.forEach(h => { if (h.aq) delete h.aq; });
+    if ((heads[0]?.type || 'wall') !== 'concealed') clearSystemAq();
+    return { ...s, heads, addons: clearedAddons };
+  }
+
+  // Multi: extras live per head; drop any system-level airquality, and clear per-head AQ for non-concealed heads
+  clearSystemAq();
+  heads.forEach(h => {
+    if (h.type !== 'concealed' && h.aq) h.aq = {};
+    if (!h.aq) h.aq = {};
+  });
+  return { ...s, heads, addons: clearedAddons };
+}
+
 export function baseForSystem(s: SystemState, project: ProjectState) {
   if (s.sysType === 'mini') return miniSetPrice(s, project.tier);
   if (s.sysType === 'multi') return condenserPrice(s, project.tier);
@@ -195,7 +255,7 @@ export function systemSubtotal(s: SystemState, project: ProjectState, systemsLen
     return t;
   }
   if (s.sysType === 'multi') {
-    let t = baseForSystem(s, project) + headsTotal(s, project.tier);
+    let t = baseForSystem(s, project) + headsTotal(s, project.tier) + sysHeadExtras(s);
     SYSTEM_ADDON_DEFS.forEach(def => { t += addonLineTotal(def, s.addons[def.id], systemsLength, s); });
     return t;
   }
@@ -228,7 +288,7 @@ export function miniBtuLabel(s: SystemState) {
 
 export function sysSummary(s: SystemState) {
   if (s.sysType === 'mini') {
-    const parts = [brandOf(s).name, `Mini-Split · ${miniBtuLabel(s)}`];
+    const parts = [brandOf(s).name, `Mini-Split · ${miniBtuLabel(s)}`, miniHeadTypeName(s)];
     SYSTEM_ADDON_DEFS.forEach(def => { const a = s.addons[def.id]; if (a && a.on) { parts.push(def.shortName || def.name); } });
     return parts.join(' · ');
   }
@@ -236,6 +296,11 @@ export function sysSummary(s: SystemState) {
     const n = (s.heads || []).length;
     const parts = [brandOf(s).name, `Multi-Split · ${n} head${n !== 1 ? 's' : ''}`];
     SYSTEM_ADDON_DEFS.forEach(def => { const a = s.addons[def.id]; if (a && a.on) { parts.push(def.shortName || def.name); } });
+    headExtraDefs().forEach(d => {
+      if ((s.heads || []).some(h => h.type === 'concealed' && h.aq && h.aq[d.id])) {
+        parts.push(d.shortName || d.name);
+      }
+    });
     return parts.join(' · ');
   }
   const parts = [brandOf(s).name, `${s.tons} ton`];

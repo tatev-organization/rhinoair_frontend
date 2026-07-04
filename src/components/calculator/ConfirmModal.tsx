@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { ProjectState, SystemState, baseForSystem, systemSubtotal, addonLineTotal, headsTotal, multiCondenserBracketLabel, isDuctless, miniBtuLabel, miniHeadTypeName } from './calculatorUtils';
+import { ProjectState, SystemState, baseForSystem, systemSubtotal, addonLineTotal, headsTotal, multiCondenserBracketLabel, isDuctless, miniBtuLabel, miniHeadTypeName, headExtraDefs } from './calculatorUtils';
 import { BRANDS, BRAND_EFF, SYSTEM_ADDON_DEFS, PROJECT_ADDON_DEFS, ZONE_FIRST, ZONE_ADDL, NEST_RATE } from './calculatorData';
 
 interface ConfirmModalProps {
@@ -31,6 +31,14 @@ export default function ConfirmModal({ show, onClose, project, systems, onConfir
       const headsCount = (s.heads || []).length;
       const hTotal = headsTotal(s, project.tier);
       lines.push({ item: `${brand.name} Multi-Split system (${multiCondenserBracketLabel(s)} · ${headsCount} head${headsCount !== 1 ? 's' : ''})`, amount: base + hTotal });
+      (s.heads || []).forEach((h, hi) => {
+        headExtraDefs().forEach(d => {
+          if (h.type === 'concealed' && h.aq && h.aq[d.id]) {
+            const lbl = h.name?.trim() ? h.name.trim() : `Head ${hi + 1}`;
+            lines.push({ item: `${d.shortName || d.name} — ${lbl}`, amount: d.rate || 0 });
+          }
+        });
+      });
     } else {
       lines.push({ item: `${brand.name} ${s.tons}-ton base`, amount: base });
       const effLevels = BRAND_EFF[s.brand] || BRAND_EFF.goodman;

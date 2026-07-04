@@ -1,5 +1,5 @@
 import React from 'react';
-import { ProjectState, SystemState, AddonDef, AddonState, baseForSystem, systemSubtotal, isDuctless, sysDisplayName, addonLineTotal, headsTotal, multiCondenserBracketLabel, miniBtuLabel, miniHeadTypeName } from './calculatorUtils';
+import { ProjectState, SystemState, AddonDef, AddonState, baseForSystem, systemSubtotal, isDuctless, sysDisplayName, addonLineTotal, headsTotal, multiCondenserBracketLabel, miniBtuLabel, miniHeadTypeName, headExtraDefs } from './calculatorUtils';
 import { BRANDS, BRAND_EFF, SYSTEM_ADDON_DEFS, PROJECT_ADDON_DEFS, ZONE_FIRST, ZONE_ADDL, NEST_RATE, DUCTLESS } from './calculatorData';
 
 interface EstimatePanelProps {
@@ -71,6 +71,18 @@ export default function EstimatePanel({ project, systems, onOpenConfirm, onReset
           <span className="v">{formatPrice(base + hTotal)}</span>
         </div>
       );
+      (s.heads || []).forEach((h, hi) => {
+        headExtraDefs().forEach(d => {
+          if (h.type === 'concealed' && h.aq && h.aq[d.id]) {
+            rows.push(
+              <div className="est-sys-line" key={`hx-${hi}-${d.id}`}>
+                <span>{d.shortName || d.name} · <span style={{ color: '#7d8e8b' }}>{h.name?.trim() ? h.name.trim() : `Head ${hi + 1}`}</span></span>
+                <span className="v">{formatPrice(d.rate || 0)}</span>
+              </div>
+            );
+          }
+        });
+      });
     } else {
       const eff = getEff(s);
       rows.push(
@@ -166,6 +178,14 @@ export default function EstimatePanel({ project, systems, onOpenConfirm, onReset
         const headsCount = (s.heads || []).length;
         const hTotal = headsTotal(s, project.tier);
         lines.push(`<div class="pd-line"><span>${esc(`${brand.name} Multi-Split system (${multiCondenserBracketLabel(s)} · ${headsCount} head${headsCount !== 1 ? 's' : ''})`)}</span><span class="pl-amt">${fmt(base + hTotal)}</span></div>`);
+        (s.heads || []).forEach((h, hi) => {
+          headExtraDefs().forEach(d => {
+            if (h.type === 'concealed' && h.aq && h.aq[d.id]) {
+              const lbl = h.name?.trim() ? h.name.trim() : `Head ${hi + 1}`;
+              lines.push(`<div class="pd-line"><span>${esc(`${d.shortName || d.name} — ${lbl}`)}</span><span class="pl-amt">${fmt(d.rate || 0)}</span></div>`);
+            }
+          });
+        });
       } else {
         const eff = getEff(s);
         lines.push(`<div class="pd-line"><span>${esc(`${brand.name} ${s.tons}-ton base`)}</span><span class="pl-amt">${fmt(base)}</span></div>`);

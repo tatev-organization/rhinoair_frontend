@@ -132,6 +132,16 @@
   .head-label { font-weight:700; font-size:13.5px; color:var(--ink); }
   .head-label .head-name-disp { color:var(--muted); font-weight:400; font-size:12.5px; }
   .head-row-right { display:flex; align-items:center; gap:12px; }
+  .head-extras { margin-top:12px; padding-top:12px; border-top:1px dashed var(--line); display:flex; flex-direction:column; gap:8px; }
+  .hx-title { font-family:'Sometype Mono',monospace; font-size:10.5px; font-weight:700; letter-spacing:0.1em; text-transform:uppercase; color:var(--steel); }
+  .hx-title .hx-sub { text-transform:none; letter-spacing:0; color:#9fb0ad; margin-left:7px; font-weight:600; }
+  .head-extra { display:flex; align-items:center; gap:11px; padding:9px 12px; border:1.5px solid var(--line); border-radius:10px; background:#fbfcfc; cursor:pointer; transition:0.13s; }
+  .head-extra:hover { border-color:var(--steel); }
+  .head-extra.on { border-color:var(--rhino); background:#fff; }
+  .head-extra .hx-info { flex:1; min-width:0; display:flex; flex-direction:column; gap:2px; }
+  .head-extra .hx-name { font-weight:800; font-size:13px; color:var(--ink); }
+  .head-extra .hx-desc { font-size:11px; color:#8b9a97; line-height:1.35; }
+  .head-extra .hx-rate { font-family:'Sometype Mono',monospace; font-size:12.5px; font-weight:700; color:var(--rhino); white-space:nowrap; }
   .head-price { font-family:'Sometype Mono',monospace; font-weight:600; font-size:13px; color:var(--rhino); white-space:nowrap; }
   .head-remove { background:none; border:none; color:var(--rust); cursor:pointer; font-size:15px; line-height:1; padding:2px 5px; border-radius:6px; }
   .head-remove:hover { background:rgba(192,73,43,0.12); }
@@ -245,7 +255,7 @@
   .seg-area.hidden { display:none; }
   .seg-label { font-family:'Sometype Mono',monospace; font-size:11px; text-transform:uppercase; letter-spacing:0.08em; color:var(--muted); margin-bottom:10px; }
   .seg-row { display:flex; gap:10px; }
-  .seg { flex:1; border:2px solid var(--line); background:var(--paper); border-radius:9px; padding:11px 12px; cursor:pointer; transition:0.14s; text-align:left; display:flex; flex-direction:column; align-items:flex-start; justify-content:center; }
+  .seg { flex:1; height:auto; border:2px solid var(--line); background:var(--paper); border-radius:9px; padding:11px 12px; cursor:pointer; transition:0.14s; text-align:left; }
   .seg:hover { border-color:var(--rhino); }
   .seg.active { border-color:var(--ink); background:var(--ink); color:var(--paper); }
   .seg .seg-ttl { font-weight:800; font-size:14px; }

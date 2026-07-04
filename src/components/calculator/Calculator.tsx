@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { ProjectState, SystemState } from './calculatorUtils';
+import { ProjectState, SystemState, brandOf, effOf, hasConcealedHead } from './calculatorUtils';
 import SystemCard from './SystemCard';
 import ProjectAddons from './ProjectAddons';
 import EstimatePanel from './EstimatePanel';
@@ -90,8 +90,13 @@ export default function Calculator() {
   };
 
   const anyDuctless = systems.some(s => s.sysType === 'mini' || s.sysType === 'multi');
-  const anyConcealed = false;
+  const anyConcealed = systems.some(s => hasConcealedHead(s));
   const showDuctlessIncludes = anyDuctless && !anyConcealed;
+
+  // calculator-9: tier anchors display reflects brand + efficiency adjustment of the reference system,
+  // but only when the reference system is ducted.
+  const ref = systems[0];
+  const tierAdj = ref && ref.sysType === 'ducted' ? (brandOf(ref).delta + effOf(ref).delta) : 0;
 
   return (
     <div id="appWrap">
@@ -159,7 +164,7 @@ export default function Calculator() {
                       {tier === 1 ? '1–3 projects' : tier === 2 ? '4–9 projects' : tier === 3 ? '10–15 projects' : '15+ projects'}
                     </div>
                     <div className="tier-anchor">
-                      ${TIER_ANCHORS[tier].toLocaleString('en-US')} <span style={{ opacity: 0.6 }}>/ ducted 5-ton</span>
+                      ${(TIER_ANCHORS[tier] + tierAdj).toLocaleString('en-US')} <span style={{ opacity: 0.6 }}>/ ducted 5-ton</span>
                     </div>
                   </div>
                 ))}

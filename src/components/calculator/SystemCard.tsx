@@ -1,6 +1,6 @@
 import React from 'react';
-import { SystemState, AddonState, ProjectState, isDuctless, systemSubtotal, sysDisplayName, sysSummary, brandOf, miniTierMult, Head, headsTotal, multiCondenserPrice, getAutoCondenser, miniPriceFor, ductlessCfg } from './calculatorUtils';
-import { BRANDS, BRAND_EFF, HEAD_BTU, TON_OPTS, SYSTEM_ADDON_DEFS, SYS_TYPES, ZONE_FIRST, ZONE_ADDL, NEST_RATE, MULTI_HEAD, HEAD_TYPES, MINI_BTU_ORDER } from './calculatorData';
+import { SystemState, AddonState, ProjectState, isDuctless, systemSubtotal, sysDisplayName, sysSummary, brandOf, miniTierMult, Head, headsTotal, multiCondenserPrice, getAutoCondenser, miniPriceFor, ductlessCfg, normalizeAqForSystem, headExtraDefs, sysHeadExtras, headExtrasCost } from './calculatorUtils';
+import { BRANDS, BRAND_EFF, HEAD_BTU, TON_OPTS, SYSTEM_ADDON_DEFS, SYS_TYPES, ZONE_FIRST, ZONE_ADDL, NEST_RATE, MULTI_HEAD, HEAD_TYPES, MINI_BTU_ORDER, MINI_HEAD_ADDER, PER_TON } from './calculatorData';
 import AddonItem from './AddonItem';
 import { brandLogoSvg } from './calculatorLogos';
 
@@ -15,7 +15,7 @@ interface SystemCardProps {
 
 export default function SystemCard({ system, index, project, systemsLength, onChange, onRemove }: SystemCardProps) {
   const update = (changes: Partial<SystemState>) => {
-    onChange({ ...system, ...changes });
+    onChange(normalizeAqForSystem({ ...system, ...changes }));
   };
 
   const handleSysTypeChange = (t: string) => {
@@ -89,17 +89,19 @@ export default function SystemCard({ system, index, project, systemsLength, onCh
     const multiZoneCost = ZONE_FIRST + Math.max(z - 1, 0) * ZONE_ADDL + ((nestOk && system.multiNest) ? NEST_RATE * z : 0);
 
     return (
-      <div className="zone-mode">
-        <div className="zm-label">Zone configuration</div>
-        <div className="zone-seg-row">
-          <button type="button" className={`zone-seg ${single ? 'active' : ''}`} onClick={() => update({ zoned: false })}>
-            <div className="zs-ttl">Single Zone</div>
-            <div className="zs-sub">included in base</div>
-          </button>
-          <button type="button" className={`zone-seg ${!single ? 'active' : ''}`} onClick={() => update({ zoned: true })}>
-            <div className="zs-ttl">Multi-Zone Damper System</div>
-            <div className="zs-sub">from $3,100 (2 zones)</div>
-          </button>
+      <>
+        <div className="zone-mode">
+          <div className="zm-label">Zone configuration</div>
+          <div className="zone-seg-row">
+            <button type="button" className={`zone-seg ${single ? 'active' : ''}`} onClick={() => update({ zoned: false })}>
+              <div className="zs-ttl">Single Zone</div>
+              <div className="zs-sub">included in base</div>
+            </button>
+            <button type="button" className={`zone-seg ${!single ? 'active' : ''}`} onClick={() => update({ zoned: true })}>
+              <div className="zs-ttl">Multi-Zone Damper System</div>
+              <div className="zs-sub">from $3,100 (2 zones)</div>
+            </button>
+          </div>
         </div>
 
         <div className={`zone-panel zone-single ${single ? '' : 'hidden'}`}>
@@ -121,7 +123,7 @@ export default function SystemCard({ system, index, project, systemsLength, onCh
         </div>
 
         <div className={`zone-panel zone-multi ${single ? 'hidden' : ''}`}>
-          <div className="addon on" data-zonemulti="1">
+          <div className="addon on">
             <div className="addon-head">
               <div className="addon-info">
                 <div className="name">Multi-Zone Damper System</div>
@@ -133,18 +135,18 @@ export default function SystemCard({ system, index, project, systemsLength, onCh
               <span className="qty-label">Number of zones</span>
               <div className="stepper zones-step">
                 <button type="button" className="dec" onClick={() => update({ zoneCount: Math.max((system.zoneCount || 2) - 1, 2) })}>−</button>
-                <input type="number" className="zones-input qty" value={z} min="2" onChange={e => update({ zoneCount: Math.max(parseInt(e.target.value) || 2, 2) })} />
-                <button type="button" className="inc" onClick={() => update({ zoneCount: (system.zoneCount || 2) + 1 })}>+</button>
+                <input type="number" className="zones-input" value={system.zoneCount || 2} readOnly />
+                <button type="button" className="inc" onClick={() => update({ zoneCount: Math.max(system.zoneCount || 2, 2) + 1 })}>+</button>
               </div>
               <span className="qty-line-total zones-total">{formatPrice(multiZoneCost)}</span>
             </div>
             {nestOk && (
-              <div className="nest-sub">
+              <div className="nest-sub" onClick={() => update({ multiNest: !system.multiNest })}>
                 <div className="nest-sub-info">
                   <div className="nest-sub-label">Upgrade to Google Nest (4th Gen) or Equal thermostats?</div>
                   <div className="nest-sub-hint">${NEST_RATE} per zone · 1 per zone (replaces standard)</div>
                 </div>
-                <label className="switch">
+                <label className="switch" onClick={e => e.stopPropagation()}>
                   <input type="checkbox" checked={!!system.multiNest} onChange={e => update({ multiNest: e.target.checked })} />
                   <span className="slider"></span>
                 </label>
@@ -152,7 +154,7 @@ export default function SystemCard({ system, index, project, systemsLength, onCh
             )}
           </div>
         </div>
-      </div>
+      </>
     );
   };
 
@@ -210,7 +212,8 @@ export default function SystemCard({ system, index, project, systemsLength, onCh
 
     const condenserAmt = multiCondenserPrice(system, project.tier);
     const hTotal = headsTotal(system, project.tier);
-    const msTotal = condenserAmt + hTotal;
+    const hxTotal = sysHeadExtras(system);
+    const msTotal = condenserAmt + hTotal + hxTotal;
 
     const autoCondenser = getAutoCondenser(system);
     const cfg = ductlessCfg(system);
@@ -242,8 +245,10 @@ export default function SystemCard({ system, index, project, systemsLength, onCh
         <div className="heads-list">
           {heads.map((h, i) => {
             const baseRate = tbl[h.btu] || 0;
-            const adder = HEAD_TYPES.find(x => x.id === h.type)?.adder || 0;
-            const headRate = Math.round(((baseRate + adder) * projectTierMult) / 10) * 10;
+            // Match calculator-9: scale BTU base only, then add flat head-type adder
+            const btuScaled = Math.round((baseRate * projectTierMult) / 10) * 10;
+            const adder = MINI_HEAD_ADDER[h.type] || 0;
+            const headRate = btuScaled + adder;
 
             return (
               <div key={h.id} className="head-row">
@@ -283,6 +288,53 @@ export default function SystemCard({ system, index, project, systemsLength, onCh
                     ))}
                   </select>
                 </div>
+                {h.type === 'concealed' && (
+                  <div className="head-extras">
+                    <div className="hx-title">
+                      Air handler add-ons <span className="hx-sub">available on this ducted head</span>
+                    </div>
+                    {headExtraDefs().map(def => {
+                      const on = !!h.aq?.[def.id];
+                      return (
+                        <div
+                          key={def.id}
+                          className={`head-extra ${on ? 'on' : ''}`}
+                          onClick={(e) => {
+                            // ignore clicks on the switch itself; handled below
+                            if ((e.target as HTMLElement).closest('.switch')) return;
+                            const newHeads = [...heads];
+                            const cur = { ...(newHeads[i] as Head) };
+                            cur.aq = { ...(cur.aq || {}) };
+                            cur.aq[def.id] = !on;
+                            newHeads[i] = cur;
+                            update({ heads: newHeads });
+                          }}
+                        >
+                          <div className="hx-info">
+                            <span className="hx-name">{def.shortName || def.name}</span>
+                            <span className="hx-desc">{def.desc}</span>
+                          </div>
+                          <span className="hx-rate">{formatPrice(def.rate || 0)}</span>
+                          <label className="switch" onClick={(e) => e.stopPropagation()}>
+                            <input
+                              type="checkbox"
+                              checked={on}
+                              onChange={(e) => {
+                                const newHeads = [...heads];
+                                const cur = { ...(newHeads[i] as Head) };
+                                cur.aq = { ...(cur.aq || {}) };
+                                cur.aq[def.id] = e.target.checked;
+                                newHeads[i] = cur;
+                                update({ heads: newHeads });
+                              }}
+                            />
+                            <span className="slider"></span>
+                          </label>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
               </div>
             );
           })}
@@ -359,7 +411,9 @@ export default function SystemCard({ system, index, project, systemsLength, onCh
                 <button key={o.ton} type="button" className={`opt ton ${system.tons === o.ton ? 'active' : ''}`} onClick={() => update({ tons: o.ton })}>
                   <div className="ttl">{o.ton} ton</div>
                   {o.sub && <div className="sub">{o.sub}</div>}
-                  <div className="price-hint">−{formatPrice(o.down * 1500)}</div>
+                  <div className="price-hint">
+                    {formatPrice(project.anchor - o.down * PER_TON + brandOf(system).delta + (tiers.find(x => x.id === system.tier) || tiers[0])?.delta)}
+                  </div>
                 </button>
               ))}
             </div>
@@ -399,8 +453,15 @@ export default function SystemCard({ system, index, project, systemsLength, onCh
           </div>
         )}
 
-        {/* Air Quality Group */}
-        {iaqDefs.length > 0 && (
+        {/* Air Quality Group (calculator-9 rules) */}
+        {(() => {
+          // ducted: full system-level AQ
+          if (system.sysType === 'ducted') return true;
+          // mini: only show ductlessOk AQ when head is concealed
+          if (system.sysType === 'mini') return (system.heads?.[0]?.type || 'wall') === 'concealed';
+          // multi: no system-level AQ (extras are per concealed head)
+          return false;
+        })() && iaqDefs.length > 0 && (
           <div className={`aq-group ${system.aqOpen ? 'open' : ''}`}>
             <button type="button" className="aq-head" onClick={() => update({ aqOpen: !system.aqOpen })}>
               <div className="aq-head-info">
@@ -410,9 +471,17 @@ export default function SystemCard({ system, index, project, systemsLength, onCh
               <span className="aq-chev">▾</span>
             </button>
             <div className="aq-body">
-              {iaqDefs.map(def => (
-                <AddonItem key={def.id} def={def} value={system.addons[def.id]} onChange={val => handleAddonChange(def.id, val)} sys={system} systemsLength={systemsLength} />
-              ))}
+              {(() => {
+                if (system.sysType === 'ducted') {
+                  return iaqDefs.map(def => (
+                    <AddonItem key={def.id} def={def} value={system.addons[def.id]} onChange={val => handleAddonChange(def.id, val)} sys={system} systemsLength={systemsLength} />
+                  ));
+                }
+                // mini + concealed: only ductlessOk
+                return iaqDefs.filter(d => d.ductlessOk).map(def => (
+                  <AddonItem key={def.id} def={def} value={system.addons[def.id]} onChange={val => handleAddonChange(def.id, val)} sys={system} systemsLength={systemsLength} />
+                ));
+              })()}
             </div>
           </div>
         )}
