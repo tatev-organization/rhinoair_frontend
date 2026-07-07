@@ -1,4 +1,4 @@
-export * from './calculatorData';
+export * from "./calculatorData";
 import {
   AddonDef,
   BRANDS,
@@ -17,8 +17,8 @@ import {
   NEST_RATE,
   ZONE_FIRST,
   ZONE_ADDL,
-  TON_OPTS
-} from './calculatorData';
+  TON_OPTS,
+} from "./calculatorData";
 
 export interface Head {
   id: number;
@@ -72,12 +72,22 @@ export interface ProjectState {
   revisedFrom: string;
 }
 
-export const formatPrice = (n: number) => '$' + Math.round(n).toLocaleString('en-US');
+export const formatPrice = (n: number) =>
+  "$" + Math.round(n).toLocaleString("en-US");
 
-export function brandOf(s: SystemState) { return BRANDS.find(b => b.id === s.brand) || BRANDS[0]; }
-export function effLevelsFor(s: SystemState) { return BRAND_EFF[s.brand] || BRAND_EFF.goodman; }
-export function effOf(s: SystemState) { const arr = effLevelsFor(s); return arr.find(e => e.id === s.tier) || arr[0]; }
-export function ductlessCfg(s: SystemState) { return DUCTLESS[s.brand] || DUCTLESS.goodman; }
+export function brandOf(s: SystemState) {
+  return BRANDS.find((b) => b.id === s.brand) || BRANDS[0];
+}
+export function effLevelsFor(s: SystemState) {
+  return BRAND_EFF[s.brand] || BRAND_EFF.goodman;
+}
+export function effOf(s: SystemState) {
+  const arr = effLevelsFor(s);
+  return arr.find((e) => e.id === s.tier) || arr[0];
+}
+export function ductlessCfg(s: SystemState) {
+  return DUCTLESS[s.brand] || DUCTLESS.goodman;
+}
 
 export function miniTierMult(projectTier: number) {
   return (TIER_ANCHORS[projectTier] || TIER_ANCHORS[4]) / TIER_ANCHORS[4];
@@ -85,23 +95,29 @@ export function miniTierMult(projectTier: number) {
 
 // Price for a mini-split set: scale wall base by tier, round to $10, then add flat head-type adder
 // (adder is flat across tiers — matches the HTML's miniPriceFor logic exactly)
-export function miniPriceFor(brandId: string, btuId: string, headType: string, projectTier: number) {
-  const m = MINI_SETS.find(x => x.brand === brandId && x.btuId === btuId);
+export function miniPriceFor(
+  brandId: string,
+  btuId: string,
+  headType: string,
+  projectTier: number,
+) {
+  const m = MINI_SETS.find((x) => x.brand === brandId && x.btuId === btuId);
   const basePrice = m?.price || 0;
-  const wallScaled = Math.round(basePrice * miniTierMult(projectTier) / 10) * 10;
+  const wallScaled =
+    Math.round((basePrice * miniTierMult(projectTier)) / 10) * 10;
   return wallScaled + (MINI_HEAD_ADDER[headType] || 0);
 }
 
 export function miniSetPrice(s: SystemState, projectTier: number) {
   const btuId = miniBtuLabel(s);
-  const headType = s.heads?.[0]?.type || 'wall';
+  const headType = s.heads?.[0]?.type || "wall";
   return miniPriceFor(s.brand, btuId, headType, projectTier);
 }
 
 export function totalHeadBtu(s: SystemState) {
   let btu = 0;
   for (const h of s.heads || []) {
-    const b = HEAD_BTU.find(x => x.id === h.btu);
+    const b = HEAD_BTU.find((x) => x.id === h.btu);
     if (b) btu += b.btu;
   }
   return btu;
@@ -109,18 +125,19 @@ export function totalHeadBtu(s: SystemState) {
 
 // Auto-select condenser bracket by total head BTU — no user choice, matches the HTML exactly
 export function multiCondenserPrice(s: SystemState, projectTier: number) {
-  const brackets = MULTI_CONDENSER.filter(x => x.brand === s.brand);
+  const brackets = MULTI_CONDENSER.filter((x) => x.brand === s.brand);
   const total = totalHeadBtu(s);
-  const c = brackets.find(b => total <= b.max) || brackets[brackets.length - 1];
+  const c =
+    brackets.find((b) => total <= b.max) || brackets[brackets.length - 1];
   if (!c) return 0;
-  return Math.round(c.price * miniTierMult(projectTier) / 10) * 10;
+  return Math.round((c.price * miniTierMult(projectTier)) / 10) * 10;
 }
 
 // Returns the auto-selected condenser for a multi-split system
 export function getAutoCondenser(s: SystemState) {
-  const brackets = MULTI_CONDENSER.filter(x => x.brand === s.brand);
+  const brackets = MULTI_CONDENSER.filter((x) => x.brand === s.brand);
   const total = totalHeadBtu(s);
-  return brackets.find(b => total <= b.max) || brackets[brackets.length - 1];
+  return brackets.find((b) => total <= b.max) || brackets[brackets.length - 1];
 }
 
 export function headsTotal(s: SystemState, projectTier: number) {
@@ -129,7 +146,7 @@ export function headsTotal(s: SystemState, projectTier: number) {
     const tbl = MULTI_HEAD[s.brand] || MULTI_HEAD.goodman;
     const base = tbl[h.btu] || 0;
     // Scale only the BTU base by tier multiplier; head-type adder is FLAT across tiers
-    const btuScaled = Math.round(base * miniTierMult(projectTier) / 10) * 10;
+    const btuScaled = Math.round((base * miniTierMult(projectTier)) / 10) * 10;
     const adder = MINI_HEAD_ADDER[h.type] || 0;
     total += btuScaled + adder;
   }
@@ -141,19 +158,24 @@ export function condenserPrice(s: SystemState, projectTier: number) {
 }
 
 export function isDuctless(s: SystemState) {
-  return s.sysType === 'mini' || s.sysType === 'multi';
+  return s.sysType === "mini" || s.sysType === "multi";
 }
 
 // Air-handler add-ons (ERV / UV Coil / Air Scrubber) attach to an air handler.
 // In calculator-9: ducted uses system-level AQ group; mini shows ductlessOk AQ only if concealed;
 // multi has NO system-level AQ — extras live per concealed head (h.aq).
 export function headExtraDefs() {
-  return SYSTEM_ADDON_DEFS.filter(d => d.group === 'airquality' && d.ductlessOk);
+  return SYSTEM_ADDON_DEFS.filter(
+    (d) => d.group === "airquality" && d.ductlessOk,
+  );
 }
 
 export function headExtrasCost(h: Head | undefined) {
-  if (!h || h.type !== 'concealed' || !h.aq) return 0;
-  return headExtraDefs().reduce((t, d) => t + (h.aq?.[d.id] ? (d.rate || 0) : 0), 0);
+  if (!h || h.type !== "concealed" || !h.aq) return 0;
+  return headExtraDefs().reduce(
+    (t, d) => t + (h.aq?.[d.id] ? d.rate || 0 : 0),
+    0,
+  );
 }
 
 export function sysHeadExtras(s: SystemState) {
@@ -161,77 +183,95 @@ export function sysHeadExtras(s: SystemState) {
 }
 
 export function hasConcealedHead(s: SystemState) {
-  if (s.sysType === 'mini') return (s.heads?.[0]?.type || 'wall') === 'concealed';
-  if (s.sysType === 'multi') return (s.heads || []).some(h => h.type === 'concealed');
+  if (s.sysType === "mini")
+    return (s.heads?.[0]?.type || "wall") === "concealed";
+  if (s.sysType === "multi")
+    return (s.heads || []).some((h) => h.type === "concealed");
   return false;
 }
 
 // Clears any AQ state that no longer applies (calculator-9 normalizeAq()).
 export function normalizeAqForSystem(s: SystemState): SystemState {
   // Always ensure heads exist in expected shapes
-  const heads = (s.heads || []).map(h => ({ ...h })) as Head[];
+  const heads = (s.heads || []).map((h) => ({ ...h })) as Head[];
 
   // Helper to clear system-level airquality add-ons
   const clearedAddons = { ...s.addons };
   const clearSystemAq = () => {
-    SYSTEM_ADDON_DEFS.filter(d => d.group === 'airquality').forEach(d => {
+    SYSTEM_ADDON_DEFS.filter((d) => d.group === "airquality").forEach((d) => {
       if (clearedAddons[d.id]) clearedAddons[d.id] = { on: false };
     });
   };
 
-  if (s.sysType === 'ducted') {
+  if (s.sysType === "ducted") {
     // Ducted keeps system-level AQ group; no per-head AQ
-    heads.forEach(h => { if (h.aq) delete h.aq; });
+    heads.forEach((h) => {
+      if (h.aq) delete h.aq;
+    });
     return { ...s, heads, addons: clearedAddons };
   }
 
-  if (s.sysType === 'mini') {
+  if (s.sysType === "mini") {
     // Mini: system-level AQ only when concealed; otherwise clear it
     heads.splice(1); // ensure single head
-    heads.forEach(h => { if (h.aq) delete h.aq; });
-    if ((heads[0]?.type || 'wall') !== 'concealed') clearSystemAq();
+    heads.forEach((h) => {
+      if (h.aq) delete h.aq;
+    });
+    if ((heads[0]?.type || "wall") !== "concealed") clearSystemAq();
     return { ...s, heads, addons: clearedAddons };
   }
 
   // Multi: extras live per head; drop any system-level airquality, and clear per-head AQ for non-concealed heads
   clearSystemAq();
-  heads.forEach(h => {
-    if (h.type !== 'concealed' && h.aq) h.aq = {};
+  heads.forEach((h) => {
+    if (h.type !== "concealed" && h.aq) h.aq = {};
     if (!h.aq) h.aq = {};
   });
   return { ...s, heads, addons: clearedAddons };
 }
 
 export function baseForSystem(s: SystemState, project: ProjectState) {
-  if (s.sysType === 'mini') return miniSetPrice(s, project.tier);
-  if (s.sysType === 'multi') return condenserPrice(s, project.tier);
+  if (s.sysType === "mini") return miniSetPrice(s, project.tier);
+  if (s.sysType === "multi") return condenserPrice(s, project.tier);
   const tons = s.tons || 2;
-  const down = TON_OPTS.find(o => o.ton === tons)?.down || 0;
+  const down = TON_OPTS.find((o) => o.ton === tons)?.down || 0;
   return project.anchor - down * PER_TON + brandOf(s).delta;
 }
 
 export function flatRate(def: AddonDef, sys?: SystemState) {
-  return (sys && isDuctless(sys) && def.ductlessRate != null) ? def.ductlessRate : (def.rate || 0);
+  return sys && isDuctless(sys) && def.ductlessRate != null
+    ? def.ductlessRate
+    : def.rate || 0;
 }
 
-export function addonLineTotal(def: AddonDef, a: AddonState | undefined, systemsLength: number = 1, sys?: SystemState) {
+export function addonLineTotal(
+  def: AddonDef,
+  a: AddonState | undefined,
+  systemsLength: number = 1,
+  sys?: SystemState,
+) {
   if (!a || !a.on) return 0;
-  if (def.type === 'flat') return flatRate(def, sys);
-  if (def.type === 'persystem') return (def.rate || 0) * Math.max(systemsLength, 1);
-  if (def.type === 'radiogroup') return a.segRate || 0;
-  if (def.type === 'multirow') {
+  if (def.type === "flat") return flatRate(def, sys);
+  if (def.type === "persystem")
+    return (def.rate || 0) * Math.max(systemsLength, 1);
+  if (def.type === "radiogroup") return a.segRate || 0;
+  if (def.type === "multirow") {
     let t = 0;
-    def.rows?.forEach(r => {
-      const q = (a.rows && a.rows[r.key]) ? a.rows[r.key] : 0;
+    def.rows?.forEach((r) => {
+      const q = a.rows && a.rows[r.key] ? a.rows[r.key] : 0;
       t += q * r.rate;
     });
     return t;
   }
   const q = Math.max(a.qty || def.min || 0, def.min || 0);
-  if (def.type === 'perqty') return q * (def.rate || 0);
-  if (def.type === 'firstplus') return (def.base || 0) + Math.max(q - 1, 0) * (def.rate || 0);
-  if (def.type === 'qty') {
-    if ((def.base || 0) > 0) return (def.base || 0) + Math.max(q - (def.free || 0), 0) * (def.rate || 0);
+  if (def.type === "perqty") return q * (def.rate || 0);
+  if (def.type === "firstplus")
+    return (def.base || 0) + Math.max(q - 1, 0) * (def.rate || 0);
+  if (def.type === "qty") {
+    if ((def.base || 0) > 0)
+      return (
+        (def.base || 0) + Math.max(q - (def.free || 0), 0) * (def.rate || 0)
+      );
     return q * (def.rate || 0);
   }
   return 0;
@@ -240,7 +280,7 @@ export function addonLineTotal(def: AddonDef, a: AddonState | undefined, systems
 export function zoneCost(s: SystemState) {
   const nestOk = brandOf(s).nest;
   if (!s.zoned) {
-    return (nestOk && s.singleNest) ? NEST_RATE : 0;
+    return nestOk && s.singleNest ? NEST_RATE : 0;
   }
   const z = Math.max(s.zoneCount || 2, 2);
   let t = ZONE_FIRST + Math.max(z - 1, 0) * ZONE_ADDL;
@@ -248,67 +288,117 @@ export function zoneCost(s: SystemState) {
   return t;
 }
 
-export function systemSubtotal(s: SystemState, project: ProjectState, systemsLength: number) {
-  if (s.sysType === 'mini') {
+export function systemSubtotal(
+  s: SystemState,
+  project: ProjectState,
+  systemsLength: number,
+) {
+  if (s.sysType === "mini") {
     let t = baseForSystem(s, project);
-    SYSTEM_ADDON_DEFS.forEach(def => { t += addonLineTotal(def, s.addons[def.id], systemsLength, s); });
+    SYSTEM_ADDON_DEFS.forEach((def) => {
+      t += addonLineTotal(def, s.addons[def.id], systemsLength, s);
+    });
     return t;
   }
-  if (s.sysType === 'multi') {
-    let t = baseForSystem(s, project) + headsTotal(s, project.tier) + sysHeadExtras(s);
-    SYSTEM_ADDON_DEFS.forEach(def => { t += addonLineTotal(def, s.addons[def.id], systemsLength, s); });
+  if (s.sysType === "multi") {
+    let t =
+      baseForSystem(s, project) +
+      headsTotal(s, project.tier) +
+      sysHeadExtras(s);
+    SYSTEM_ADDON_DEFS.forEach((def) => {
+      t += addonLineTotal(def, s.addons[def.id], systemsLength, s);
+    });
     return t;
   }
   let t = baseForSystem(s, project) + effOf(s).delta + zoneCost(s);
-  SYSTEM_ADDON_DEFS.forEach(def => { t += addonLineTotal(def, s.addons[def.id], systemsLength, s); });
+  SYSTEM_ADDON_DEFS.forEach((def) => {
+    t += addonLineTotal(def, s.addons[def.id], systemsLength, s);
+  });
   return t;
 }
 
-export function projectAddonsTotal(project: ProjectState, systemsLength: number) {
+export function projectAddonsTotal(
+  project: ProjectState,
+  systemsLength: number,
+) {
   let t = 0;
-  PROJECT_ADDON_DEFS.forEach(def => { t += addonLineTotal(def, project.addons[def.id], systemsLength); });
+  PROJECT_ADDON_DEFS.forEach((def) => {
+    t += addonLineTotal(def, project.addons[def.id], systemsLength);
+  });
   return t;
 }
 
-export function currentGrandTotal(systems: SystemState[], project: ProjectState) {
+export function currentGrandTotal(
+  systems: SystemState[],
+  project: ProjectState,
+) {
   let g = 0;
-  systems.forEach(s => { g += systemSubtotal(s, project, systems.length); });
+  systems.forEach((s) => {
+    g += systemSubtotal(s, project, systems.length);
+  });
   g += projectAddonsTotal(project, systems.length);
   return g;
 }
 
 export function sysDisplayName(s: SystemState, idx: number) {
-  return (s.name && s.name.trim()) ? s.name.trim() : `System ${idx + 1}`;
+  return s.name && s.name.trim() ? s.name.trim() : `System ${idx + 1}`;
 }
 
 export function miniBtuLabel(s: SystemState) {
-  const m = MINI_SETS.find(x => x.id === s.miniId);
-  return m ? m.btuId : '12k';
+  const m = MINI_SETS.find((x) => x.id === s.miniId);
+  return m ? m.btuId : "12k";
 }
 
 export function sysSummary(s: SystemState) {
-  if (s.sysType === 'mini') {
-    const parts = [brandOf(s).name, `Mini-Split · ${miniBtuLabel(s)}`, miniHeadTypeName(s)];
-    SYSTEM_ADDON_DEFS.forEach(def => { const a = s.addons[def.id]; if (a && a.on) { parts.push(def.shortName || def.name); } });
-    return parts.join(' · ');
+  if (s.sysType === "mini") {
+    const parts = [
+      brandOf(s).name,
+      `Mini-Split · ${miniBtuLabel(s)}`,
+      miniHeadTypeName(s),
+    ];
+    SYSTEM_ADDON_DEFS.forEach((def) => {
+      const a = s.addons[def.id];
+      if (a && a.on) {
+        parts.push(def.shortName || def.name);
+      }
+    });
+    return parts.join(" · ");
   }
-  if (s.sysType === 'multi') {
+  if (s.sysType === "multi") {
     const n = (s.heads || []).length;
-    const parts = [brandOf(s).name, `Multi-Split · ${n} head${n !== 1 ? 's' : ''}`];
-    SYSTEM_ADDON_DEFS.forEach(def => { const a = s.addons[def.id]; if (a && a.on) { parts.push(def.shortName || def.name); } });
-    headExtraDefs().forEach(d => {
-      if ((s.heads || []).some(h => h.type === 'concealed' && h.aq && h.aq[d.id])) {
+    const parts = [
+      brandOf(s).name,
+      `Multi-Split · ${n} head${n !== 1 ? "s" : ""}`,
+    ];
+    SYSTEM_ADDON_DEFS.forEach((def) => {
+      const a = s.addons[def.id];
+      if (a && a.on) {
+        parts.push(def.shortName || def.name);
+      }
+    });
+    headExtraDefs().forEach((d) => {
+      if (
+        (s.heads || []).some(
+          (h) => h.type === "concealed" && h.aq && h.aq[d.id],
+        )
+      ) {
         parts.push(d.shortName || d.name);
       }
     });
-    return parts.join(' · ');
+    return parts.join(" · ");
   }
   const parts = [brandOf(s).name, `${s.tons} ton`];
   if (s.zoned) {
-    const z = Math.max(s.zoneCount || 2, 2); parts.push(`${z}-zone`);
+    const z = Math.max(s.zoneCount || 2, 2);
+    parts.push(`${z}-zone`);
   }
-  SYSTEM_ADDON_DEFS.forEach(def => { const a = s.addons[def.id]; if (a && a.on) { parts.push(def.shortName || def.name); } });
-  return parts.join(' · ');
+  SYSTEM_ADDON_DEFS.forEach((def) => {
+    const a = s.addons[def.id];
+    if (a && a.on) {
+      parts.push(def.shortName || def.name);
+    }
+  });
+  return parts.join(" · ");
 }
 
 export function multiCondenserBracketLabel(s: SystemState) {
@@ -317,6 +407,6 @@ export function multiCondenserBracketLabel(s: SystemState) {
 }
 
 export function miniHeadTypeName(s: SystemState) {
-  const t = HEAD_TYPES.find(x => x.id === (s.heads?.[0]?.type || 'wall'));
-  return t ? t.name : 'Wall-Mounted';
+  const t = HEAD_TYPES.find((x) => x.id === (s.heads?.[0]?.type || "wall"));
+  return t ? t.name : "Wall-Mounted";
 }
