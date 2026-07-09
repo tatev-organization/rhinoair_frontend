@@ -3,6 +3,7 @@
 import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Modal } from '@/components/ui/Modal';
+import { useLoginMutation } from '@/redux/features/auth/authApi';
 import Image from 'next/image';
 
 export default function LoginPage() {
@@ -14,16 +15,23 @@ export default function LoginPage() {
   const [forgotEmail, setForgotEmail] = useState('');
   const [isForgotSent, setIsForgotSent] = useState(false);
 
-  const handleLogin = (e: React.FormEvent) => {
+  const [login, { isLoading }] = useLoginMutation();
+
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
-    // Mock login logic
+    
     if (!email || !password) {
       setError('Please enter both email and password.');
       return;
     }
-    // For now, always succeed
-    router.push('/dashboard');
+
+    try {
+      await login({ email, password }).unwrap();
+      router.push('/dashboard');
+    } catch (err: any) {
+      setError(err?.data?.message || 'Invalid email or password.');
+    }
   };
 
   const handleSendReset = () => {
@@ -76,8 +84,8 @@ export default function LoginPage() {
                 {error}
               </div>
             )}
-            <button type="submit" className="btn-primary login-btn">
-              Sign in &rarr;
+            <button type="submit" className="btn-primary login-btn" disabled={isLoading}>
+              {isLoading ? 'Signing in...' : 'Sign in \u2192'}
             </button>
           </form>
           

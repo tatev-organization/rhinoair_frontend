@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Archivo, Sometype_Mono } from "next/font/google";
 import "./globals.css";
+import StoreProvider from "@/redux/StoreProvider";
 
 const archivo = Archivo({
   variable: "--font-archivo",
@@ -27,7 +28,9 @@ export default function RootLayout({
       <body
         className={`${archivo.variable} ${sometypeMono.variable} antialiased`}
       >
-        {children}
+        <StoreProvider>
+          {children}
+        </StoreProvider>
       </body>
     </html>
   );
