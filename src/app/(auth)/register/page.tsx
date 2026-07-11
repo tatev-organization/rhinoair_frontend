@@ -80,56 +80,58 @@ export default function RegisterPage() {
       <div className="preview-ribbon" aria-hidden="true">
         <span>Preview</span>
       </div>
-      <div className="login-wrap">
-        <div className="login-card" style={{ maxHeight: '90vh', overflowY: 'auto' }}>
+      <div className="login-wrap" style={{ alignItems: 'flex-start', padding: '40px 24px', overflowY: 'auto' }}>
+        <div className="login-card" style={{ margin: 'auto', maxWidth: '500px' }}>
           <img className="login-logo" src="/logo.png" alt="Rhino Air" />
           <div className="login-tag">Partner Portal</div>
           <div className="login-h">Apply for an Account</div>
           <div className="login-sub">Create your Rhino Air partner account</div>
           
           <form onSubmit={handleRegister}>
-            <div className="field">
-              <label>Company Name</label>
-              <input 
-                name="name" 
-                type="text" 
-                placeholder="ABC Construction" 
-                value={formData.name}
-                onChange={handleInputChange}
-              />
+            <div style={{ display: 'flex', gap: '15px' }}>
+              <div className="field" style={{ flex: 1 }}>
+                <label>Company Name</label>
+                <input 
+                  name="name" 
+                  type="text" 
+                  placeholder="ABC Construction" 
+                  value={formData.name}
+                  onChange={handleInputChange}
+                />
+              </div>
+              <div className="field" style={{ flex: 1 }}>
+                <label>Phone Number</label>
+                <input 
+                  name="phone" 
+                  type="text" 
+                  placeholder="(555) 123-4567" 
+                  value={formData.phone}
+                  onChange={handleInputChange}
+                />
+              </div>
             </div>
             
-            <div className="field">
-              <label>Email</label>
-              <input 
-                name="email" 
-                type="email" 
-                placeholder="you@company.com" 
-                value={formData.email}
-                onChange={handleInputChange}
-              />
-            </div>
-            
-            <div className="field">
-              <label>Password</label>
-              <input 
-                name="password" 
-                type="password" 
-                placeholder="••••••••" 
-                value={formData.password}
-                onChange={handleInputChange}
-              />
-            </div>
-
-            <div className="field">
-              <label>Phone Number</label>
-              <input 
-                name="phone" 
-                type="text" 
-                placeholder="(555) 123-4567" 
-                value={formData.phone}
-                onChange={handleInputChange}
-              />
+            <div style={{ display: 'flex', gap: '15px' }}>
+              <div className="field" style={{ flex: 1 }}>
+                <label>Email</label>
+                <input 
+                  name="email" 
+                  type="email" 
+                  placeholder="you@company.com" 
+                  value={formData.email}
+                  onChange={handleInputChange}
+                />
+              </div>
+              <div className="field" style={{ flex: 1 }}>
+                <label>Password</label>
+                <input 
+                  name="password" 
+                  type="password" 
+                  placeholder="••••••••" 
+                  value={formData.password}
+                  onChange={handleInputChange}
+                />
+              </div>
             </div>
 
             <div className="field">
@@ -143,7 +145,7 @@ export default function RegisterPage() {
               />
             </div>
 
-            <div style={{ display: 'flex', gap: '10px' }}>
+            <div style={{ display: 'flex', gap: '15px' }}>
               <div className="field" style={{ flex: 2 }}>
                 <label>City</label>
                 <input 
@@ -164,17 +166,16 @@ export default function RegisterPage() {
                   onChange={handleInputChange}
                 />
               </div>
-            </div>
-
-            <div className="field">
-              <label>ZIP Code</label>
-              <input 
-                name="zip" 
-                type="text" 
-                placeholder="90001" 
-                value={formData.zip}
-                onChange={handleInputChange}
-              />
+              <div className="field" style={{ flex: 1.5 }}>
+                <label>ZIP Code</label>
+                <input 
+                  name="zip" 
+                  type="text" 
+                  placeholder="90001" 
+                  value={formData.zip}
+                  onChange={handleInputChange}
+                />
+              </div>
             </div>
 
             {error && (

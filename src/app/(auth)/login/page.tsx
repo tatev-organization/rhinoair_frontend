@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { Modal } from '@/components/ui/Modal';
 import { useLoginMutation } from '@/redux/features/auth/authApi';
 import Image from 'next/image';
+import Link from 'next/link';
 
 export default function LoginPage() {
   const router = useRouter();
@@ -87,6 +88,9 @@ export default function LoginPage() {
             <button type="submit" className="btn-primary login-btn" disabled={isLoading}>
               {isLoading ? 'Signing in...' : 'Sign in \u2192'}
             </button>
+            <div style={{ marginTop: '16px', textAlign: 'center', fontSize: '13px' }}>
+              <Link href="/register" style={{ color: 'var(--rhino)', fontWeight: 700, textDecoration: 'none' }}>Don't have an account? Apply here</Link>
+            </div>
           </form>
           
           <div className="login-foot">
