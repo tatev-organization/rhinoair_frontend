@@ -21,6 +21,7 @@ import {
   ZONE_ADDL,
   NEST_RATE,
 } from "./calculatorData";
+import { useSubmitQuoteMutation } from "../../redux/api/quoteApi";
 
 interface ConfirmModalProps {
   show: boolean;
@@ -40,6 +41,7 @@ export default function ConfirmModal({
   onPrint,
 }: ConfirmModalProps) {
   const [submitted, setSubmitted] = useState(false);
+  const [submitQuote, { isLoading }] = useSubmitQuoteMutation();
 
   if (!show) return null;
 
@@ -157,10 +159,28 @@ export default function ConfirmModal({
   );
 
   let grand = 0;
+  // We need to calculate grand before handleSubmit to send the correct total
+  const sysTotal = systems.reduce((acc, s) => acc + systemSubtotal(s, project, systems.length), 0);
+  const projTotal = projLines.reduce((acc, l) => acc + l.amount, 0);
+  grand = sysTotal + projTotal;
 
-  const handleSubmit = () => {
-    onConfirm();
-    setSubmitted(true);
+  const handleSubmit = async () => {
+    try {
+      await submitQuote({
+        builderName: project.builder,
+        projectAddress: project.address,
+        scope: `${systems.length} System(s)`,
+        tierLabel: `Tier ${project.tier}`,
+        total: grand,
+        payload: { project, systems },
+      }).unwrap();
+      
+      onConfirm();
+      setSubmitted(true);
+    } catch (err) {
+      console.error("Failed to submit quote", err);
+      alert("There was an error submitting the quote. Please try again.");
+    }
   };
 
   const handleEdit = () => {
@@ -211,7 +231,6 @@ export default function ConfirmModal({
           <div id="confirmReview" className="confirm-review">
             {systems.map((s, i) => {
               const sub = systemSubtotal(s, project, systems.length);
-              grand += sub;
               const brand = getBrand(s);
               const typeLabel =
                 s.sysType === "mini"
@@ -261,7 +280,6 @@ export default function ConfirmModal({
                   </div>
                 </div>
                 {projLines.map((l, j) => {
-                  grand += l.amount;
                   return (
                     <div className="cr-line" key={j}>
                       <span>{l.item}</span>
@@ -283,8 +301,9 @@ export default function ConfirmModal({
             className="btn btn-primary confirm-submit"
             onClick={handleSubmit}
             id="confirmSubmitBtn"
+            disabled={isLoading}
           >
-            Confirm &amp; Submit Quote
+            {isLoading ? "Submitting..." : "Confirm & Submit Quote"}
           </button>
         </div>
 

@@ -1,14 +1,14 @@
 'use client';
 
 import React, { useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useDispatch } from 'react-redux';
 import { Modal } from '@/components/ui/Modal';
 import { useLoginMutation } from '@/redux/features/auth/authApi';
-import Image from 'next/image';
+import { setCredentials } from '@/redux/features/auth/authSlice';
 import Link from 'next/link';
 
 export default function LoginPage() {
-  const router = useRouter();
+  const dispatch = useDispatch();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
@@ -21,17 +21,25 @@ export default function LoginPage() {
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
-    
+
     if (!email || !password) {
       setError('Please enter both email and password.');
       return;
     }
 
     try {
-      await login({ email, password }).unwrap();
-      router.push('/dashboard');
+      const result = await login({ email, password }).unwrap();
+      // TransformInterceptor wraps response: { data: { accessToken, refreshToken } }
+      const tokens = result?.data ?? result;
+      if (tokens?.accessToken) {
+        dispatch(setCredentials({
+          accessToken: tokens.accessToken,
+          refreshToken: tokens.refreshToken,
+        }));
+      }
+      // AuthWrapper detects token change and redirects to /dashboard automatically
     } catch (err: any) {
-      setError(err?.data?.message || 'Invalid email or password.');
+      setError(err?.data?.message || err?.data?.data?.message || 'Invalid email or password.');
     }
   };
 

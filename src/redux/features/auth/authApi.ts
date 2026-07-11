@@ -1,5 +1,5 @@
 import { baseApi } from '../../api/baseApi';
-import { setCredentials, setUser } from './authSlice';
+import { setUser } from './authSlice';
 
 export const authApi = baseApi.injectEndpoints({
   endpoints: (builder) => ({
@@ -9,18 +9,6 @@ export const authApi = baseApi.injectEndpoints({
         method: 'POST',
         body: credentials,
       }),
-      async onQueryStarted(arg, { dispatch, queryFulfilled }) {
-        try {
-          const { data } = await queryFulfilled;
-          if (data?.accessToken) {
-            dispatch(setCredentials({ accessToken: data.accessToken }));
-            // We can also fetch the profile right after login if needed, 
-            // but usually it's handled by the layout or dashboard wrapper
-          }
-        } catch (err) {
-          // Handle error gracefully if needed
-        }
-      },
     }),
     register: builder.mutation({
       query: (userData) => ({
@@ -36,17 +24,19 @@ export const authApi = baseApi.injectEndpoints({
         body: verificationData,
       }),
     }),
-    getMe: builder.query({
+    getMe: builder.query<any, string | undefined>({
       query: () => '/auth/me',
       providesTags: ['Profile'],
       async onQueryStarted(arg, { dispatch, queryFulfilled }) {
         try {
           const { data } = await queryFulfilled;
-          if (data) {
-            dispatch(setUser(data));
+          // TransformInterceptor wraps response: { data: { companyId, ... } }
+          const profile = data?.data ?? data;
+          if (profile) {
+            dispatch(setUser(profile));
           }
         } catch (err) {
-          // Handle error
+          // handled by AuthWrapper
         }
       },
     }),

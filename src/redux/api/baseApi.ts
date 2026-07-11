@@ -6,10 +6,17 @@ export const baseApi = createApi({
   baseQuery: fetchBaseQuery({
     baseUrl: 'http://localhost:3001/api/v1',
     prepareHeaders: (headers, { getState }) => {
-      const token = (getState() as RootState).auth.token;
+      let token = (getState() as RootState).auth.token;
+      
+      // Fallback to localStorage in case Redux state hasn't hydrated properly in Next.js
+      if (!token && typeof window !== 'undefined') {
+        token = localStorage.getItem('accessToken');
+      }
+
       if (token) {
         headers.set('authorization', `Bearer ${token}`);
       }
+      
       return headers;
     },
   }),
