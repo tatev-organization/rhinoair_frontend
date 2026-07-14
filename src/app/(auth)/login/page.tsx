@@ -35,9 +35,11 @@ export default function LoginPage() {
         dispatch(setCredentials({
           accessToken: tokens.accessToken,
           refreshToken: tokens.refreshToken,
+          role: tokens.role,
+          companyId: tokens.companyId,
         }));
       }
-      // AuthWrapper detects token change and redirects to /dashboard automatically
+      // AuthWrapper detects token/role change and redirects automatically
     } catch (err: any) {
       setError(err?.data?.message || err?.data?.data?.message || 'Invalid email or password.');
     }

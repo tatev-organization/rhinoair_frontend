@@ -15,19 +15,23 @@ export default function AuthWrapper({ children }: { children: React.ReactNode })
   const dispatch = useDispatch();
 
   const reduxToken = useSelector((state: RootState) => state.auth.token);
+  const reduxRole = useSelector((state: RootState) => state.auth.role);
 
   // Sync localStorage → Redux on first mount (handles page refresh)
   const [hydrated, setHydrated] = useState(false);
   useEffect(() => {
-    const stored = localStorage.getItem('accessToken');
-    if (stored && !reduxToken) {
-      dispatch(setCredentials({ accessToken: stored }));
+    const storedToken = localStorage.getItem('accessToken');
+    const storedRole = localStorage.getItem('role');
+    if (storedToken && !reduxToken) {
+      dispatch(setCredentials({ accessToken: storedToken, role: storedRole || undefined }));
     }
     setHydrated(true);
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const token = reduxToken || (hydrated ? null : undefined);
+  const role = reduxRole || (hydrated ? localStorage.getItem('role') : null);
   const isPublicRoute = PUBLIC_ROUTES.includes(pathname);
+  const isAdminRoute = pathname.startsWith('/admin');
 
   // Only validate token on protected routes (avoids blocking public pages)
   const { error, isLoading, isFetching } = useGetMeQuery(reduxToken ?? undefined, {
@@ -40,9 +44,13 @@ export default function AuthWrapper({ children }: { children: React.ReactNode })
     if (!hydrated) return;
 
     if (isPublicRoute) {
-      // Public route: if token exists → go to dashboard immediately, no need to wait for getMe
+      // Public route: if token exists → go to respective dashboard immediately
       if (reduxToken) {
-        router.replace('/dashboard');
+        if (role === 'SUPER_ADMIN') {
+          router.replace('/admin');
+        } else {
+          router.replace('/dashboard');
+        }
       } else {
         setIsReady(true);
       }
@@ -63,8 +71,14 @@ export default function AuthWrapper({ children }: { children: React.ReactNode })
       return;
     }
 
+    // RBAC logic for protected routes
+    if (isAdminRoute && role !== 'SUPER_ADMIN') {
+      router.replace('/dashboard');
+      return;
+    }
+
     setIsReady(true);
-  }, [hydrated, reduxToken, error, isLoading, isFetching, isPublicRoute, router, dispatch]);
+  }, [hydrated, reduxToken, role, error, isLoading, isFetching, isPublicRoute, isAdminRoute, router, dispatch]);
 
   // Show spinner while:
   // - localStorage hasn't been read yet (hydration)
