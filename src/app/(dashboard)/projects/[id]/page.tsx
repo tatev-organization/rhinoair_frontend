@@ -4,33 +4,20 @@ import React, { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import { Icons } from '@/components/ui/Icons';
 
+import { useGetProjectByIdQuery } from '@/redux/features/projects/projectsApi';
+
 // ── Status tracker data (mirrors build_portal.py exactly) ───────────────────
-const phases = [
-  { name: 'Planning', status: 'done', start: 'Jun 2', end: 'Jun 9',
-    items: [
-      { name: 'Design & measuring', state: 'complete' },
-      { name: 'Equipment / materials preparing', state: 'complete' },
-    ]},
-  { name: 'Rough-in', status: 'current', start: 'Jun 10', end: 'Jun 23',
-    items: [
-      { name: 'Indoor units installation', state: 'complete' },
-      { name: 'Ductwork rough-in (trunk & branch runs)', state: 'inprogress' },
-      { name: 'Line sets, drains & low voltage', state: 'notstarted' },
-      { name: 'Exhausts', state: 'notstarted' },
-      { name: 'Ready for rough inspection', state: 'notstarted' },
-    ]},
-  { name: 'Finishing', status: 'upcoming', start: 'Jun 24', end: 'Jul 8',
-    items: [
-      { name: 'Outdoor units installation', state: 'notstarted' },
-      { name: 'Registers, grilles & thermostats', state: 'notstarted' },
-      { name: 'Electrical after disconnect box', state: 'notstarted' },
-      { name: 'Startup, refrigerant balancing & test', state: 'notstarted' },
-    ]},
-  { name: 'Final Inspection', status: 'upcoming', start: 'Jul 9', end: 'Jul 11',
-    items: [
-      { name: 'Ready for final inspection', state: 'notstarted' },
-    ]},
-];
+const mapStatusToState = (status: string) => {
+  if (status === 'COMPLETE') return 'complete';
+  if (status === 'IN_PROGRESS') return 'inprogress';
+  return 'notstarted';
+};
+
+const mapPhaseStatus = (status: string) => {
+  if (status === 'DONE') return 'done';
+  if (status === 'CURRENT') return 'current';
+  return 'upcoming';
+};
 
 const stateWord: Record<string, string> = {
   complete: 'Complete',
@@ -72,7 +59,11 @@ const CO_BASE = 26500;
 const CO_PAID = 10600;
 const CO_APPROVED = 3200;
 
-export default function ProjectDetailPage() {
+export default function ProjectDetailPage({ params }: { params: Promise<{ id: string }> }) {
+  const unwrappedParams = React.use(params);
+  const { data: response, isLoading } = useGetProjectByIdQuery(unwrappedParams.id);
+  const project = response?.data;
+
   const [tab, setTab] = useState('status');
   const [co02State, setCo02State] = useState<'pending' | 'approved' | 'declined'>('pending');
   const [adjustedTotal, setAdjustedTotal] = useState(CO_BASE + CO_APPROVED);
@@ -93,7 +84,8 @@ export default function ProjectDetailPage() {
     }
   };
 
-  const outstanding = adjustedTotal - CO_PAID;
+  const dynamicPaid = project?.invoices?.filter((i: any) => i.status === 'PAID').reduce((acc: number, curr: any) => acc + parseFloat(curr.amount || 0), 0) || 0;
+  const outstanding = adjustedTotal - dynamicPaid;
 
   // ── Status panel ────────────────────────────────────────────────────────────
   const StatusPanel = () => (
@@ -107,41 +99,43 @@ export default function ProjectDetailPage() {
           </svg>
           Project schedule
         </div>
-        <div className="sched-row done">
+        <div className={`sched-row ${project?.startDate ? 'done' : 'pending'}`}>
           <span className="sched-ind"></span>
           <div className="sched-main">
             <div className="sched-label">Installation start</div>
-            <div className="sched-note">Rough-in underway</div>
+            <div className="sched-note">{project?.startDate ? 'Started' : 'Pending start'}</div>
           </div>
-          <div className="sched-date">Jun 10, 2026</div>
+          <div className="sched-date">{project?.startDate ? new Date(project.startDate).toLocaleDateString('en-US', {month: 'short', day: 'numeric', year: 'numeric'}) : 'Pending'}</div>
         </div>
-        <div className="sched-row current">
+        <div className={`sched-row ${project?.roughInspectionAt ? 'done' : (project?.startDate ? 'current' : 'pending')}`}>
           <span className="sched-ind"></span>
           <div className="sched-main">
             <div className="sched-label">Ready for rough inspection</div>
-            <div className="sched-note">On track · GC schedules the inspector</div>
+            <div className="sched-note">{project?.roughInspectionAt ? 'Completed' : 'On track · GC schedules the inspector'}</div>
           </div>
-          <div className="sched-date">Est. Jun 23, 2026</div>
+          <div className="sched-date">{project?.roughInspectionAt ? new Date(project.roughInspectionAt).toLocaleDateString('en-US', {month: 'short', day: 'numeric', year: 'numeric'}) : (project?.targetDate ? `Est. ${new Date(project.targetDate).toLocaleDateString('en-US', {month: 'short', day: 'numeric', year: 'numeric'})}` : 'Pending')}</div>
         </div>
-        <div className="sched-row pending">
+        <div className={`sched-row ${project?.finalInspectionAt ? 'done' : 'pending'}`}>
           <span className="sched-ind"></span>
           <div className="sched-main">
             <div className="sched-label">Ready for final inspection</div>
-            <div className="sched-note">Set once the site returns to us for finishing</div>
+            <div className="sched-note">{project?.finalInspectionAt ? 'Completed' : 'Set once the site returns to us for finishing'}</div>
           </div>
-          <div className="sched-date">Pending</div>
+          <div className="sched-date">{project?.finalInspectionAt ? new Date(project.finalInspectionAt).toLocaleDateString('en-US', {month: 'short', day: 'numeric', year: 'numeric'}) : 'Pending'}</div>
         </div>
       </div>
 
       {/* Phase items */}
-      {phases.map((ph, pidx) => {
-        const glab = ph.status === 'done' || ph.status === 'current' ? 'green' : 'muted';
+      {project?.phases?.map((ph: any, pidx: number) => {
+        const phStatus = mapPhaseStatus(ph.status);
+        const glab = phStatus === 'done' || phStatus === 'current' ? 'green' : 'muted';
         let wtext = '';
         let wcls = '';
-        if (ph.status === 'done') wtext = `${ph.start} – ${ph.end}`;
-        else if (ph.status === 'current') wtext = `${ph.start} – est. ${ph.end}`;
+        if (phStatus === 'done') wtext = 'Completed';
+        else if (phStatus === 'current') wtext = 'In Progress';
         else if (ph.name === 'Finishing') { wtext = 'Begins when called back'; wcls = ' upcoming'; }
         else if (ph.name === 'Final Inspection') { wtext = 'After finishing'; wcls = ' upcoming'; }
+        else { wtext = 'Pending'; wcls = ' upcoming'; }
 
         return (
           <React.Fragment key={ph.name}>
@@ -162,8 +156,8 @@ export default function ProjectDetailPage() {
               <span className={`st-glabel ${glab}`}>{ph.name}</span>
               <span className={`st-window${wcls}`}>{wtext}</span>
             </div>
-            {ph.items.map(item => (
-              <StItem key={item.name} name={item.name} state={item.state} pidx={pidx} />
+            {ph.tasks?.map((item: any) => (
+              <StItem key={item.name} name={item.name} state={mapStatusToState(item.status)} pidx={pidx} />
             ))}
           </React.Fragment>
         );
@@ -349,7 +343,7 @@ export default function ProjectDetailPage() {
         </div>
         <div className="balance-card green">
           <div className="b-lbl">Paid to date</div>
-          <div className="b-num">${CO_PAID.toLocaleString()}</div>
+          <div className="b-num">${dynamicPaid.toLocaleString()}</div>
         </div>
         <div className="balance-card amber">
           <div className="b-lbl">Outstanding</div>
@@ -417,33 +411,21 @@ export default function ProjectDetailPage() {
 
       {/* Invoices */}
       <div className="section-label" style={{marginTop:'28px'}}>Invoices</div>
-      <a className="inv-row" href="#" onClick={e=>e.preventDefault()}>
-        <span className="inv-num">INV-2041</span>
-        <div className="inv-for">
-          Deposit (40%)
-          <div className="inv-date">Issued May 30, 2026</div>
-        </div>
-        <span className="inv-amount">$10,600</span>
-        <span className="inv-badge paid">Paid</span>
-      </a>
-      <a className="inv-row" href="#" onClick={e=>e.preventDefault()}>
-        <span className="inv-num">INV-2068</span>
-        <div className="inv-for">
-          Rough-in progress (30%)
-          <div className="inv-date">Due Jun 30, 2026</div>
-        </div>
-        <span className="inv-amount">$7,950</span>
-        <span className="inv-badge due">Due</span>
-      </a>
-      <div className="inv-row scheduled">
-        <span className="inv-num">&mdash;</span>
-        <div className="inv-for">
-          Finishing &amp; completion (30%)
-          <div className="inv-date">Scheduled &middot; on completion</div>
-        </div>
-        <span className="inv-amount">$7,950</span>
-        <span className="inv-badge scheduled">Scheduled</span>
-      </div>
+      {project?.invoices?.length > 0 ? project.invoices.map((inv: any) => (
+        <a key={inv.invoiceId} className="inv-row" href="#" onClick={e=>e.preventDefault()}>
+          <span className="inv-num">INV-{inv.invoiceNumber}</span>
+          <div className="inv-for">
+            {inv.description || 'Job Invoice'}
+            <div className="inv-date">Issued {new Date(inv.createdAt).toLocaleDateString('en-US', {month: 'short', day: 'numeric', year: 'numeric'})}</div>
+          </div>
+          <span className="inv-amount">${parseFloat(inv.amount || 0).toLocaleString()}</span>
+          <span className={`inv-badge ${inv.status === 'PAID' ? 'paid' : 'due'}`}>
+            {inv.status === 'PAID' ? 'Paid' : 'Due'}
+          </span>
+        </a>
+      )) : (
+        <div style={{color:'#666', fontSize:'14px', marginTop:'8px'}}>No invoices found for this project.</div>
+      )}
     </div>
   );
 
@@ -461,11 +443,11 @@ export default function ProjectDetailPage() {
         <div className="ph-id">
           <span className="ph-ico"><Icons.home_dark style={{width:25,height:25}} /></span>
           <div>
-            <h1>1036 Norman Pl</h1>
-            <div className="ph-sub">Mid Construction Group &middot; Daikin VRV &middot; 5-Ton</div>
+            <h1>{project?.name || 'Loading Project...'}</h1>
+            <div className="ph-sub">{project?.company?.name || 'Unknown Partner'} &middot; {project?.address || 'No Address Provided'}</div>
           </div>
         </div>
-        <span className="phase roughin">Rough-in</span>
+        <span className={`phase ${project?.phaseClass || 'planning'}`}>{project?.currentPhase || 'Planning'}</span>
       </div>
 
       {/* Tabs */}

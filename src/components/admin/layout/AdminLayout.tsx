@@ -10,6 +10,7 @@ import { RootState } from '@/redux/store';
 const adminNavItems = [
   { name: 'Overview', href: '/admin', icon: 'nav_dashboard' },
   { name: 'Partners', href: '/admin/partners', icon: 'nav_account' },
+  { name: 'Projects', href: '/admin/projects', icon: 'nav_dashboard' },
 ];
 
 export function AdminLayout({ children }: { children: React.ReactNode }) {
