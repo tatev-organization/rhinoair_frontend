@@ -1,6 +1,9 @@
+'use client';
+
 import React from 'react';
 import Link from 'next/link';
 import { Icons } from '@/components/ui/Icons';
+import { useGetMyProjectsQuery } from '@/redux/features/projects/projectsApi';
 
 const PH4 = ['Planning', 'Rough-in', 'Finishing', 'Final'];
 
@@ -29,10 +32,13 @@ function Track4({ cur }: { cur: number }) {
   );
 }
 
-function ProjCard({ name, sub, phase, phaseCls, cur, docs, price, docRef, quoted }:
-  { name:string; sub:string; phase:string; phaseCls:string; cur?:number; docs?:number; price?:string; docRef?:string; quoted?:boolean }) {
+function ProjCard({ 
+  id, name, sub, phase, phaseCls, cur, docs, price, docRef, quoted, stName 
+}: { 
+  id: string; name:string; sub:string; phase:string; phaseCls:string; cur?:number; docs?:number; price?:string; docRef?:string; quoted?:boolean; stName?:string 
+}) {
   return (
-    <Link className="pcard" href="/projects/1">
+    <Link className="pcard" href={`/projects/${id}`}>
       <div className="pcard-top">
         <div className="pcard-id">
           <span className="pcard-ico"><Icons.home /></span>
@@ -47,52 +53,116 @@ function ProjCard({ name, sub, phase, phaseCls, cur, docs, price, docRef, quoted
       <div className="pcard-meta">
         {docs !== undefined && <span><Icons.doc />{docs} documents</span>}
         {docRef && price && <span><Icons.doc />{docRef} &middot; {price}</span>}
-        <span><Icons.home />{quoted ? 'Awaiting approval' : 'Single-family residence'}</span>
+        <span><Icons.home />{quoted ? 'Awaiting approval' : (stName || 'Single-family residence')}</span>
       </div>
     </Link>
   );
 }
 
 export default function ProjectsPage() {
+  const { data: projects, isLoading } = useGetMyProjectsQuery();
+
+  if (isLoading) {
+    return <div style={{ padding: 40, textAlign: 'center' }}>Loading projects...</div>;
+  }
+
+  const projectList = Array.isArray(projects) ? projects : projects?.data || [];
+
+  const activeProjects = projectList.filter((p: any) => p.status === 'ACTIVE' && p.currentPhaseIndex < 3) || [];
+  const completedProjects = projectList.filter((p: any) => p.status === 'COMPLETED' || p.currentPhaseIndex === 3) || [];
+  // For now, if there are quotes, we can map them, otherwise we just use a static mock or empty
+  const quotedProjects = projectList.filter((p: any) => p.status === 'QUOTED') || [];
+
   return (
     <>
-      <a className="backlink" href="/dashboard">
+      <Link className="backlink" href="/dashboard">
         <svg viewBox="0 0 24 24" fill="none" style={{width:14,height:14}}>
           <path d="M15 6l-6 6 6 6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
         </svg>
         Dashboard
-      </a>
+      </Link>
 
       <div className="pagehead">
         <div>
           <div className="tag">All Projects</div>
           <h1>Projects</h1>
-          <div className="subtitle">3 active &middot; 1 quoted &middot; 4 completed this agreement year</div>
+          <div className="subtitle">
+            {activeProjects.length} active &middot; {quotedProjects.length} quoted &middot; {completedProjects.length} completed
+          </div>
         </div>
         <Link className="btn-primary" href="/calculator">
           <Icons.calc />New Estimate
         </Link>
       </div>
 
-      <div className="section-label">Active</div>
-      <section className="projects">
-        <ProjCard name="1036 Norman Pl" sub="Daikin VRV · 5-Ton" phase="Rough-in" phaseCls="roughin" cur={1} docs={9} />
-        <ProjCard name="1030 Norman Pl" sub="Ducted Heat Pump · 4-Ton" phase="Finishing" phaseCls="finishing" cur={2} docs={11} />
-        <ProjCard name="Malibu Rebuild" sub="Daikin VRV · 6-Ton" phase="Planning" phaseCls="planning" cur={0} docs={4} />
-      </section>
+      {activeProjects.length > 0 && (
+        <>
+          <div className="section-label">Active</div>
+          <section className="projects">
+            {activeProjects.map((p: any) => (
+              <ProjCard 
+                key={p.projectId}
+                id={p.projectId}
+                name={p.name}
+                sub={p.address || `ST Project ${p.serviceTitanProjectId}`}
+                phase={p.currentPhase || 'Planning'}
+                phaseCls={p.phaseClass || 'planning'}
+                cur={p.currentPhaseIndex || 0}
+                docs={p._count?.documents || 0}
+                stName={`ST Account: ${p.company?.name || 'Unknown'}`}
+              />
+            ))}
+          </section>
+        </>
+      )}
 
-      <div className="section-label">Quoted</div>
-      <section className="projects">
-        <ProjCard name="Bel Air Rebuild" sub="Daikin VRV · 5-Ton · estimate ready" phase="Quoted" phaseCls="quoted" docRef="RA-104915" price="$27,500" quoted />
-      </section>
+      {quotedProjects.length > 0 && (
+        <>
+          <div className="section-label">Quoted</div>
+          <section className="projects">
+            {quotedProjects.map((p: any) => (
+              <ProjCard 
+                key={p.projectId}
+                id={p.projectId}
+                name={p.name}
+                sub={p.address || `ST Project ${p.serviceTitanProjectId}`}
+                phase="Quoted"
+                phaseCls="quoted"
+                price={`$${p.quotedPrice || '0.00'}`}
+                docRef={p.quoteNumber}
+                quoted
+              />
+            ))}
+          </section>
+        </>
+      )}
 
-      <div className="section-label">Completed</div>
-      <section className="projects">
-        <ProjCard name="3928 Sunset Dr" sub="Daikin VRV · 4-Ton" phase="Complete" phaseCls="complete" cur={3} docs={14} />
-        <ProjCard name="1142 Linda Vista" sub="Ducted Heat Pump · 5-Ton" phase="Complete" phaseCls="complete" cur={3} docs={12} />
-        <ProjCard name="1455 Casiano Rd" sub="Daikin VRV · 5-Ton" phase="Complete" phaseCls="complete" cur={3} docs={16} />
-        <ProjCard name="618 Lachman Ln" sub="Ducted Heat Pump · 4-Ton" phase="Complete" phaseCls="complete" cur={3} docs={13} />
-      </section>
+      {completedProjects.length > 0 && (
+        <>
+          <div className="section-label">Completed</div>
+          <section className="projects">
+            {completedProjects.map((p: any) => (
+              <ProjCard 
+                key={p.projectId}
+                id={p.projectId}
+                name={p.name}
+                sub={p.address || `ST Project ${p.serviceTitanProjectId}`}
+                phase="Complete"
+                phaseCls="complete"
+                cur={3}
+                docs={p._count?.documents || 0}
+                stName={`ST Account: ${p.company?.name || 'Unknown'}`}
+              />
+            ))}
+          </section>
+        </>
+      )}
+
+      {projectList.length === 0 && (
+        <div style={{ padding: 40, textAlign: 'center', color: 'var(--tx-sub)' }}>
+          No projects found.
+        </div>
+      )}
     </>
   );
 }

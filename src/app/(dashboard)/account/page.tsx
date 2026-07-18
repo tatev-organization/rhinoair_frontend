@@ -2,8 +2,14 @@
 
 import React from 'react';
 import { Icons } from '@/components/ui/Icons';
+import { useDispatch } from 'react-redux';
+import { useRouter } from 'next/navigation';
+import { logout } from '@/redux/features/auth/authSlice';
 
 export default function AccountPage() {
+  const dispatch = useDispatch();
+  const router = useRouter();
+
   return (
     <div style={{maxWidth:'880px'}}>
       <a className="backlink" href="/dashboard">
@@ -124,7 +130,15 @@ export default function AccountPage() {
         <div className="card-title">Login &amp; Security</div>
         <div className="sec-actions">
           <button className="btn-ghost" onClick={() => alert('Opening password change')}>Change password</button>
-          <a className="btn-ghost danger" href="/login">Sign out</a>
+          <button 
+            className="btn-ghost danger" 
+            onClick={() => {
+              dispatch(logout());
+              router.push('/login');
+            }}
+          >
+            Sign out
+          </button>
         </div>
       </div>
     </div>

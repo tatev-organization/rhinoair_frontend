@@ -28,6 +28,30 @@ export const adminApi = baseApi.injectEndpoints({
       }),
       invalidatesTags: ['Partners'],
     }),
+    getAllProjects: builder.query<any, void>({
+      query: () => '/admin/projects',
+      providesTags: ['Project'],
+    }),
+    updateProjectPhase: builder.mutation<any, { projectId: string; currentPhaseIndex: number; currentPhase: string; phaseClass: string }>({
+      query: ({ projectId, ...body }) => ({
+        url: `/admin/projects/${projectId}/phase`,
+        method: 'PATCH',
+        body,
+      }),
+      invalidatesTags: ['Project'],
+    }),
+    getProjectById: builder.query<any, string>({
+      query: (projectId) => `/admin/projects/${projectId}`,
+      providesTags: (result, error, id) => [{ type: 'Project', id }],
+    }),
+    updateTaskStatus: builder.mutation<any, { projectId: string; taskId: string; status: string }>({
+      query: ({ projectId, taskId, status }) => ({
+        url: `/admin/projects/${projectId}/tasks/${taskId}/status`,
+        method: 'PATCH',
+        body: { status },
+      }),
+      invalidatesTags: (result, error, { projectId }) => [{ type: 'Project', id: projectId }],
+    }),
   }),
 });
 
@@ -37,4 +61,8 @@ export const {
   useGetSTCustomersQuery,
   useAssignSTCustomerMutation,
   useRemoveSTCustomerMutation,
+  useGetAllProjectsQuery,
+  useUpdateProjectPhaseMutation,
+  useGetProjectByIdQuery,
+  useUpdateTaskStatusMutation,
 } = adminApi;
