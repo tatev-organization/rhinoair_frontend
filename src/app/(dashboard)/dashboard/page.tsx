@@ -3,18 +3,24 @@ import Link from 'next/link';
 import { Icons } from '@/components/ui/Icons';
 import { ProjectCard } from '@/components/ui/ProjectCard';
 import { activeProjects } from '@/lib/dummyData';
+import { useGetMeQuery } from '@/redux/features/auth/authApi';
 
 export default function DashboardPage() {
+  const { data: userProfile } = useGetMeQuery(undefined);
+  const company = userProfile?.data?.company || userProfile?.company;
+  const companyName = company?.name || 'Company Name';
+  const tier = company?.tier || 4;
+
   return (
     <>
       <section className="welcome">
         <div>
           <div className="tag">Welcome back</div>
-          <h1 id="dashCompany">Mid Construction Group</h1>
+          <h1 id="dashCompany">{companyName}</h1>
           <div className="sub">
             <span className="tier-chip">
               <Icons.trophy />
-              <span id="dashTier">Tier 4 Partner</span>
+              <span id="dashTier">Tier {tier} Partner</span>
             </span>
             <span className="dot-sep"></span>
             <span>3 Active Projects</span>
@@ -79,7 +85,7 @@ export default function DashboardPage() {
         <div className="tp-top">
           <span className="tp-label">
             <Icons.trophy style={{ color: '#5a9e2f' }} />
-            Tier 4 Agreement
+            Tier {tier} Agreement
           </span>
           <span className="tp-status">On track</span>
         </div>

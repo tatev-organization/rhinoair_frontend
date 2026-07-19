@@ -67,7 +67,9 @@ export function PartnerListTable() {
               {partners.map((partner: any) => (
                 <tr key={partner.companyId} style={{ borderBottom: '1px solid #e5e7eb', transition: 'background-color 0.2s' }} onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#f9fafb'} onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}>
                   <td style={{ padding: '16px' }}>
-                    <div style={{ fontWeight: 600, color: '#111827' }}>{partner.name}</div>
+                    <Link href={`/admin/partners/${partner.companyId}`} style={{ fontWeight: 600, color: '#4f46e5', textDecoration: 'none' }}>
+                      {partner.name}
+                    </Link>
                     <div style={{ fontSize: '0.875rem', color: '#6b7280', marginTop: '2px' }}>
                       {partner.users?.[0]?.email || 'No user linked'}
                     </div>
@@ -117,8 +119,7 @@ export function PartnerListTable() {
                     <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
                       <Link 
                         href={`/admin/partners/${partner.companyId}`}
-                        className="btn-outline"
-                        style={{ padding: '6px 12px', fontSize: '0.875rem' }}
+                        style={{ padding: '6px 12px', fontSize: '0.875rem', border: '1px solid #d1d5db', borderRadius: '6px', color: '#374151', textDecoration: 'none', backgroundColor: '#ffffff' }}
                       >
                         View Details
                       </Link>

@@ -52,6 +52,18 @@ export const adminApi = baseApi.injectEndpoints({
       }),
       invalidatesTags: (result, error, { projectId }) => [{ type: 'Project', id: projectId }],
     }),
+    updatePartnerTier: builder.mutation<any, { companyId: string; tier: number }>({
+      query: ({ companyId, tier }) => ({
+        url: `/admin/partners/${companyId}/tier`,
+        method: 'PATCH',
+        body: { tier },
+      }),
+      invalidatesTags: (result, error, { companyId }) => [{ type: 'Partners', id: companyId }, 'Partners'],
+    }),
+    getPartnerQuotes: builder.query<any, string>({
+      query: (companyId) => `/admin/partners/${companyId}/quotes`,
+      providesTags: (result, error, id) => [{ type: 'Partners', id: `quotes-${id}` }],
+    }),
   }),
 });
 
@@ -65,4 +77,6 @@ export const {
   useUpdateProjectPhaseMutation,
   useGetProjectByIdQuery,
   useUpdateTaskStatusMutation,
+  useUpdatePartnerTierMutation,
+  useGetPartnerQuotesQuery,
 } = adminApi;

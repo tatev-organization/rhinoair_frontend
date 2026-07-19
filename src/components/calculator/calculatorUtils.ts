@@ -70,27 +70,29 @@ export interface ProjectState {
   quoteExpiry: string;
   confirmedOnce: boolean;
   revisedFrom: string;
+  stCustomerId?: string;
 }
 
 export const formatPrice = (n: number) =>
   "$" + Math.round(n).toLocaleString("en-US");
 
 export function brandOf(s: SystemState) {
-  return BRANDS.find((b) => b.id === s.brand) || BRANDS[0];
+  return BRANDS?.find((b) => b.id === s.brand) || BRANDS?.[0] || { delta: 0, warranty: 10, nest: false };
 }
 export function effLevelsFor(s: SystemState) {
-  return BRAND_EFF[s.brand] || BRAND_EFF.goodman;
+  return BRAND_EFF?.[s.brand] || BRAND_EFF?.goodman || [];
 }
 export function effOf(s: SystemState) {
   const arr = effLevelsFor(s);
-  return arr.find((e) => e.id === s.tier) || arr[0];
+  return arr?.find((e) => e.id === s.tier) || arr?.[0] || { delta: 0 };
 }
 export function ductlessCfg(s: SystemState) {
-  return DUCTLESS[s.brand] || DUCTLESS.goodman;
+  return DUCTLESS?.[s.brand] || DUCTLESS?.goodman || { condenser: 0, multiSurcharge: 0, seer2: "", warrantyFull: "" };
 }
 
 export function miniTierMult(projectTier: number) {
-  return (TIER_ANCHORS[projectTier] || TIER_ANCHORS[4]) / TIER_ANCHORS[4];
+  const base = TIER_ANCHORS?.[4] || 1; // Prevent division by zero
+  return (TIER_ANCHORS?.[projectTier] || base) / base;
 }
 
 // Price for a mini-split set: scale wall base by tier, round to $10, then add flat head-type adder
@@ -101,7 +103,7 @@ export function miniPriceFor(
   headType: string,
   projectTier: number,
 ) {
-  const m = MINI_SETS.find((x) => x.brand === brandId && x.btuId === btuId);
+  const m = MINI_SETS?.find((x) => x.brand === brandId && x.btuId === btuId);
   const basePrice = m?.price || 0;
   const wallScaled =
     Math.round((basePrice * miniTierMult(projectTier)) / 10) * 10;
@@ -135,9 +137,9 @@ export function multiCondenserPrice(s: SystemState, projectTier: number) {
 
 // Returns the auto-selected condenser for a multi-split system
 export function getAutoCondenser(s: SystemState) {
-  const brackets = MULTI_CONDENSER.filter((x) => x.brand === s.brand);
+  const brackets = MULTI_CONDENSER?.filter((x) => x.brand === s.brand) || [];
   const total = totalHeadBtu(s);
-  return brackets.find((b) => total <= b.max) || brackets[brackets.length - 1];
+  return brackets.find((b) => total <= b.max) || brackets[brackets.length - 1] || { price: 0, ports: 0 };
 }
 
 export function headsTotal(s: SystemState, projectTier: number) {

@@ -12,13 +12,15 @@ import SystemCard from "./SystemCard";
 import ProjectAddons from "./ProjectAddons";
 import EstimatePanel from "./EstimatePanel";
 import ConfirmModal from "./ConfirmModal";
-import { TIER_ANCHORS } from "./calculatorData";
+import { TIER_ANCHORS, setPricingConfig } from "./calculatorData";
+import { useGetPricingConfigQuery } from "../../redux/api/pricingApi";
+import { useGetMeQuery } from "../../redux/features/auth/authApi";
 import "./calculator.css";
 
 const newSystem = (id: number): SystemState => ({
   id: id,
   sysType: "ducted",
-  brand: "acpro",
+  brand: "goodman",
   tier: "standard",
   tons: 5,
   addons: {},
@@ -47,6 +49,36 @@ export default function Calculator() {
   const [systems, setSystems] = useState<SystemState[]>([newSystem(1)]);
   const [nextSysId, setNextSysId] = useState(2);
   const [showConfirm, setShowConfirm] = useState(false);
+  const [configLoaded, setConfigLoaded] = useState(false);
+  const { data: config, isLoading, isError } = useGetPricingConfigQuery();
+  const { data: userProfile } = useGetMeQuery(undefined);
+
+  useEffect(() => {
+    if (config?.data) {
+      setPricingConfig(config.data);
+      setConfigLoaded(true);
+    }
+  }, [config]);
+
+  useEffect(() => {
+    const unwrappedProfile = userProfile?.data || userProfile;
+    if (unwrappedProfile?.company) {
+      const customers = unwrappedProfile.company.stCustomers || [];
+      const firstCustomer = customers[0];
+      setProject((prev) => {
+        const tier = unwrappedProfile.company.tier || 4;
+        const anchor = TIER_ANCHORS[tier] || prev.anchor;
+        
+        return {
+          ...prev,
+          builder: firstCustomer ? (firstCustomer.serviceTitanName || "Unknown Builder") : "No Builder Assigned",
+          stCustomerId: firstCustomer ? firstCustomer.serviceTitanCustomerId : undefined,
+          tier,
+          anchor,
+        };
+      });
+    }
+  }, [userProfile]);
 
   useEffect(() => {
     const quoteDate = new Date();
@@ -115,6 +147,22 @@ export default function Calculator() {
   const tierAdj =
     ref && ref.sysType === "ducted" ? brandOf(ref).delta + effOf(ref).delta : 0;
 
+  if (isLoading || !configLoaded) {
+    return (
+      <div className="flex h-screen items-center justify-center bg-gray-50 dark:bg-gray-900">
+        <div className="text-lg font-medium text-gray-500">Loading calculator...</div>
+      </div>
+    );
+  }
+
+  if (isError) {
+    return (
+      <div className="flex h-screen items-center justify-center bg-gray-50 dark:bg-gray-900">
+        <div className="text-lg font-medium text-red-500">Failed to load pricing data. Please contact admin.</div>
+      </div>
+    );
+  }
+
   return (
     <div id="appWrap">
       <div className="preview-ribbon" aria-hidden="true">
@@ -158,13 +206,39 @@ export default function Calculator() {
               <div className="section-label">Project</div>
               <div className="proj-field">
                 <label htmlFor="builderName">Builder / company name</label>
-                <input
-                  id="builderName"
-                  className="locked-input"
-                  type="text"
-                  readOnly
-                  value={project.builder}
-                />
+                {(() => {
+                  const unwrappedProfile = userProfile?.data || userProfile;
+                  const customers = unwrappedProfile?.company?.stCustomers || [];
+                  return customers.length > 1 ? (
+                    <select
+                      id="builderName"
+                      value={project.stCustomerId || ""}
+                      onChange={(e) => {
+                        const selectedId = e.target.value;
+                        const selectedCust = customers.find((c: any) => c.serviceTitanCustomerId === selectedId);
+                        setProject({
+                          ...project,
+                          stCustomerId: selectedId,
+                          builder: selectedCust ? (selectedCust.serviceTitanName || "Unknown Builder") : "No Builder Assigned",
+                        });
+                      }}
+                    >
+                      {customers.map((c: any) => (
+                        <option key={c.serviceTitanCustomerId} value={c.serviceTitanCustomerId}>
+                          {c.serviceTitanName || "Unknown Builder"}
+                        </option>
+                      ))}
+                    </select>
+                  ) : (
+                    <input
+                      id="builderName"
+                      className="locked-input"
+                      type="text"
+                      readOnly
+                      value={project.builder}
+                    />
+                  );
+                })()}
               </div>
               <div className="proj-field">
                 <label htmlFor="projAddress">Project address</label>

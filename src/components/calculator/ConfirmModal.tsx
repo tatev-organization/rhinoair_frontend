@@ -173,6 +173,7 @@ export default function ConfirmModal({
         tierLabel: `Tier ${project.tier}`,
         total: grand,
         payload: { project, systems },
+        stCustomerId: project.stCustomerId,
       }).unwrap();
       
       onConfirm();

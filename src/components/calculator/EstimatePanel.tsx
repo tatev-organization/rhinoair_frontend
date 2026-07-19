@@ -74,10 +74,10 @@ export default function EstimatePanel({
   };
 
   const getBrand = (sys: SystemState) =>
-    BRANDS.find((b) => b.id === sys.brand) || BRANDS[0];
+    (BRANDS || []).find((b) => b.id === sys.brand) || (BRANDS || [])[0] || { name: "Loading...", nest: false };
   const getEff = (sys: SystemState) => {
-    const levels = BRAND_EFF[sys.brand] || BRAND_EFF.goodman;
-    return levels.find((t) => t.id === sys.tier) || levels[0];
+    const levels = BRAND_EFF?.[sys.brand] || BRAND_EFF?.goodman || [];
+    return levels.find((t) => t.id === sys.tier) || levels[0] || { name: "Loading", delta: 0, desc: "", warranty: 0 };
   };
 
   let grand = 0;
@@ -184,7 +184,7 @@ export default function EstimatePanel({
       }
     }
 
-    SYSTEM_ADDON_DEFS.forEach((def) => {
+    (SYSTEM_ADDON_DEFS || []).forEach((def) => {
       const a = s.addons[def.id];
       if (!a || !a.on) return;
       if (
@@ -259,7 +259,7 @@ export default function EstimatePanel({
         const sub = systemSubtotal(s, project, systems.length);
         const base = baseForSystem(s, project);
         const nestOk = brand.nest;
-        const ductlessCfg = DUCTLESS[s.brand] || DUCTLESS.goodman;
+        const ductlessCfg = DUCTLESS?.[s.brand] || DUCTLESS?.goodman || { seer2: "", warrantyFull: "" };
 
         const lines: string[] = [];
 
@@ -311,7 +311,7 @@ export default function EstimatePanel({
           }
         }
 
-        SYSTEM_ADDON_DEFS.forEach((def) => {
+        (SYSTEM_ADDON_DEFS || []).forEach((def) => {
           const a = s.addons[def.id];
           if (!a || !a.on) return;
           if (
@@ -356,7 +356,7 @@ export default function EstimatePanel({
 
     const projAddonsLines: string[] = [];
     let printProjTotal = 0;
-    PROJECT_ADDON_DEFS.forEach((def) => {
+    (PROJECT_ADDON_DEFS || []).forEach((def) => {
       const a = project.addons[def.id];
       if (a && a.on) {
         const lt = addonLineTotal(def, a, systems.length);
@@ -426,7 +426,7 @@ export default function EstimatePanel({
     window.print();
   };
 
-  const projTotal = PROJECT_ADDON_DEFS.reduce((sum, def) => {
+  const projTotal = (PROJECT_ADDON_DEFS || []).reduce((sum, def) => {
     const a = project.addons[def.id];
     if (!a || !a.on) return sum;
     const lt = addonLineTotal(def, a, systems.length);
@@ -488,7 +488,7 @@ export default function EstimatePanel({
               </span>
               <span className="esh-val">{formatPrice(projTotal)}</span>
             </div>
-            {PROJECT_ADDON_DEFS.map((def) => {
+            {(PROJECT_ADDON_DEFS || []).map((def) => {
               const a = project.addons[def.id];
               if (!a || !a.on) return null;
               const lt = addonLineTotal(def, a, systems.length);

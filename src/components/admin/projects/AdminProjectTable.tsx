@@ -62,6 +62,7 @@ export function AdminProjectTable() {
             <tr>
               <th style={{ textAlign: 'left', padding: '12px 20px', borderBottom: '1px solid var(--border)', color: 'var(--tx-sub)', fontSize: '12px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Project</th>
               <th style={{ textAlign: 'left', padding: '12px 20px', borderBottom: '1px solid var(--border)', color: 'var(--tx-sub)', fontSize: '12px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Partner Company</th>
+              <th style={{ textAlign: 'left', padding: '12px 20px', borderBottom: '1px solid var(--border)', color: 'var(--tx-sub)', fontSize: '12px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Builder / ST Customer</th>
               <th style={{ textAlign: 'left', padding: '12px 20px', borderBottom: '1px solid var(--border)', color: 'var(--tx-sub)', fontSize: '12px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>ST Project ID</th>
               <th style={{ textAlign: 'left', padding: '12px 20px', borderBottom: '1px solid var(--border)', color: 'var(--tx-sub)', fontSize: '12px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Current Phase</th>
               <th style={{ textAlign: 'right', padding: '12px 20px', borderBottom: '1px solid var(--border)', color: 'var(--tx-sub)', fontSize: '12px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Update Status</th>
@@ -78,6 +79,9 @@ export function AdminProjectTable() {
                 </td>
                 <td style={{ padding: '16px 20px', color: 'var(--tx-main)' }}>
                   {proj.company?.name}
+                </td>
+                <td style={{ padding: '16px 20px', color: 'var(--tx-sub)' }}>
+                  {proj.builderName || 'Unknown'}
                 </td>
                 <td style={{ padding: '16px 20px', color: 'var(--tx-sub)' }}>
                   {proj.serviceTitanProjectId || 'N/A'}

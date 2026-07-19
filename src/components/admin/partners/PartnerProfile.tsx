@@ -2,12 +2,16 @@
 
 import React, { useState } from 'react';
 import Link from 'next/link';
-import { useGetPartnerByIdQuery } from '@/redux/features/admin/adminApi';
+import { useGetPartnerByIdQuery, useUpdatePartnerTierMutation } from '@/redux/features/admin/adminApi';
 import { AssignSTCustomerModal } from './AssignSTCustomerModal';
+import { PartnerQuotesTable } from './PartnerQuotesTable';
 
 export function PartnerProfile({ companyId }: { companyId: string }) {
   const { data: partnerResponse, isLoading, error } = useGetPartnerByIdQuery(companyId);
+  const [updatePartnerTier] = useUpdatePartnerTierMutation();
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isEditingTier, setIsEditingTier] = useState(false);
+  const [tierValue, setTierValue] = useState<number>(4);
 
   if (isLoading) {
     return (
@@ -27,6 +31,15 @@ export function PartnerProfile({ companyId }: { companyId: string }) {
 
   // The actual company object might be wrapped in a 'data' field depending on the interceptor
   const company = partnerResponse?.data || partnerResponse;
+
+  const handleTierUpdate = async () => {
+    try {
+      await updatePartnerTier({ companyId, tier: tierValue }).unwrap();
+      setIsEditingTier(false);
+    } catch (err) {
+      alert('Failed to update tier');
+    }
+  };
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
@@ -51,9 +64,30 @@ export function PartnerProfile({ companyId }: { companyId: string }) {
               {company.address || 'No physical address provided'}
             </p>
             <div style={{ display: 'flex', gap: '12px', marginTop: '16px' }}>
-              <span style={{ display: 'inline-flex', alignItems: 'center', padding: '4px 12px', borderRadius: '9999px', fontSize: '0.875rem', fontWeight: 600, backgroundColor: '#f3f4f6', color: '#374151' }}>
-                Tier {company.tier} Partner
-              </span>
+              {isEditingTier ? (
+                <span style={{ display: 'inline-flex', alignItems: 'center', gap: '8px' }}>
+                  <select 
+                    value={tierValue} 
+                    onChange={(e) => setTierValue(Number(e.target.value))}
+                    style={{ padding: '2px 8px', borderRadius: '4px', border: '1px solid #d1d5db', fontSize: '0.875rem' }}
+                  >
+                    {[1, 2, 3, 4].map(t => <option key={t} value={t}>Tier {t}</option>)}
+                  </select>
+                  <button onClick={handleTierUpdate} style={{ fontSize: '0.75rem', padding: '2px 8px', background: '#4f46e5', color: '#fff', border: 'none', borderRadius: '4px', cursor: 'pointer' }}>Save</button>
+                  <button onClick={() => setIsEditingTier(false)} style={{ fontSize: '0.75rem', padding: '2px 8px', background: '#e5e7eb', color: '#374151', border: 'none', borderRadius: '4px', cursor: 'pointer' }}>Cancel</button>
+                </span>
+              ) : (
+                <span 
+                  style={{ display: 'inline-flex', alignItems: 'center', padding: '4px 12px', borderRadius: '9999px', fontSize: '0.875rem', fontWeight: 600, backgroundColor: '#f3f4f6', color: '#374151', cursor: 'pointer' }}
+                  onClick={() => {
+                    setTierValue(company.tier);
+                    setIsEditingTier(true);
+                  }}
+                  title="Click to edit tier"
+                >
+                  Tier {company.tier} Partner ✎
+                </span>
+              )}
               <span style={{ display: 'inline-flex', alignItems: 'center', padding: '4px 12px', borderRadius: '9999px', fontSize: '0.875rem', fontWeight: 600, backgroundColor: '#dbeafe', color: '#1e40af' }}>
                 {company.stCustomers?.length || 0} ST Link(s)
               </span>
@@ -192,6 +226,9 @@ export function PartnerProfile({ companyId }: { companyId: string }) {
           </div>
         )}
       </div>
+
+      {/* Quotes Table Section */}
+      <PartnerQuotesTable companyId={companyId} />
 
       {isModalOpen && (
         <AssignSTCustomerModal 

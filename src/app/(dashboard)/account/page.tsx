@@ -5,10 +5,23 @@ import { Icons } from '@/components/ui/Icons';
 import { useDispatch } from 'react-redux';
 import { useRouter } from 'next/navigation';
 import { logout } from '@/redux/features/auth/authSlice';
+import { useGetMeQuery } from '@/redux/features/auth/authApi';
 
 export default function AccountPage() {
   const dispatch = useDispatch();
   const router = useRouter();
+  
+  const { data: userProfile } = useGetMeQuery(undefined);
+  const company = userProfile?.data?.company || userProfile?.company;
+  const user = userProfile?.data || userProfile;
+
+  const companyName = company?.name || 'Company Name';
+  const tier = company?.tier || 4;
+  const address = company?.address || '';
+  const contactName = company?.contactName || user?.name || '';
+  const email = user?.email || '';
+  const phone = company?.repPhone || user?.phone || '';
+  const partnerSince = company?.partnerSince ? new Date(company.partnerSince).getFullYear() : new Date().getFullYear();
 
   return (
     <div style={{maxWidth:'880px'}}>
@@ -21,10 +34,12 @@ export default function AccountPage() {
 
       {/* Account header */}
       <div className="acct-header">
-        <div className="acct-avatar" id="acctAvatar">MC</div>
+        <div className="acct-avatar" id="acctAvatar">
+          {companyName.substring(0, 2).toUpperCase()}
+        </div>
         <div>
-          <h1 id="acctCompany">Mid Construction Group</h1>
-          <div className="since" id="acctSince">Partner since 2024</div>
+          <h1 id="acctCompany">{companyName}</h1>
+          <div className="since" id="acctSince">Partner since {partnerSince}</div>
         </div>
       </div>
 
@@ -35,7 +50,7 @@ export default function AccountPage() {
             <Icons.trophy />
             Pricing tier
           </div>
-          <div className="tc-tier">Tier <span id="acctTier">4</span></div>
+          <div className="tc-tier">Tier <span id="acctTier">{tier}</span></div>
           <div className="tc-meta">15+ projects per year</div>
         </div>
         <div className="tc-note">
@@ -50,11 +65,11 @@ export default function AccountPage() {
         <div className="card-title">Company Details</div>
         <div className="field">
           <label>Company name</label>
-          <input id="fCompany" defaultValue="Mid Construction Group" />
+          <input id="fCompany" defaultValue={companyName} readOnly />
         </div>
         <div className="field">
           <label>Address</label>
-          <input id="fAddress" defaultValue="9100 Wilshire Blvd, Beverly Hills, CA 90212" />
+          <input id="fAddress" defaultValue={address} readOnly />
         </div>
         <div className="sec-actions">
           <button className="btn-ghost" onClick={() => alert('Company details saved')}>Save changes</button>
@@ -67,16 +82,16 @@ export default function AccountPage() {
         <div className="grid-2">
           <div className="field">
             <label>Contact name</label>
-            <input id="fContact" defaultValue="David Mirzakhanian" />
+            <input id="fContact" defaultValue={contactName} readOnly />
           </div>
           <div className="field">
             <label>Phone</label>
-            <input id="fPhone" defaultValue="(310) 555-0148" />
+            <input id="fPhone" defaultValue={phone} readOnly />
           </div>
         </div>
         <div className="field">
           <label>Email</label>
-          <input id="fEmail" defaultValue="david@midconstruction.com" />
+          <input id="fEmail" defaultValue={email} readOnly />
         </div>
         <div className="sec-actions">
           <button className="btn-ghost" onClick={() => alert('Contact information saved')}>Save changes</button>

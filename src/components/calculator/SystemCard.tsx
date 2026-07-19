@@ -38,6 +38,7 @@ import {
 } from "./calculatorData";
 import AddonItem from "./AddonItem";
 import { brandLogoSvg } from "./calculatorLogos";
+import { Icons } from "@/components/ui/Icons";
 
 interface SystemCardProps {
   system: SystemState;
@@ -108,18 +109,18 @@ export default function SystemCard({
   };
 
   // --- Type Selector ---
-  const types = SYS_TYPES;
+  const types = SYS_TYPES || [];
 
   // --- Brand Selector ---
-  const brandOpts = BRANDS.filter((b) => {
+  const brandOpts = (BRANDS || []).filter((b) => {
     if (system.sysType === "mini") return b.mini;
     if (system.sysType === "multi") return b.multi;
     return b.ducted;
   });
 
   // --- Efficiency Selector (Ducted) ---
-  const activeBrand = BRANDS.find((b) => b.id === system.brand);
-  const tiers = BRAND_EFF[system.brand] || BRAND_EFF.goodman;
+  const activeBrand = (BRANDS || []).find((b) => b.id === system.brand);
+  const tiers = BRAND_EFF?.[system.brand] || BRAND_EFF?.goodman || [];
 
   // --- Addons ---
   const handleAddonChange = (addonId: string, val: AddonState) => {
@@ -131,13 +132,13 @@ export default function SystemCard({
   const COMMON_ADDONS = new Set(["furnace", "crane"]);
   const MORE_ADDONS = ["coastal", "curb", "hers", "hersfinal"];
 
-  const visibleNonIaq = SYSTEM_ADDON_DEFS.filter(
+  const visibleNonIaq = (SYSTEM_ADDON_DEFS || []).filter(
     (d) => d.group !== "airquality" && !(ductless && hideForDuctless.has(d.id)),
   );
   const commonDefs = visibleNonIaq.filter((d) => COMMON_ADDONS.has(d.id));
   const moreDefs = visibleNonIaq.filter((d) => MORE_ADDONS.includes(d.id));
   const moreSel = moreDefs.filter((d) => system.addons[d.id]?.on).length;
-  const iaqDefs = SYSTEM_ADDON_DEFS.filter(
+  const iaqDefs = (SYSTEM_ADDON_DEFS || []).filter(
     (d) => d.group === "airquality" && (!ductless || d.ductlessOk),
   );
   const iaqSel = iaqDefs.filter((d) => system.addons[d.id]?.on).length;
@@ -296,7 +297,7 @@ export default function SystemCard({
           </span>
         </div>
         <div className="ton-grid tonnage">
-          {MINI_BTU_ORDER.map((btuId) => {
+          {(MINI_BTU_ORDER || []).map((btuId) => {
             const price = miniPriceFor(
               system.brand,
               btuId,
@@ -321,7 +322,7 @@ export default function SystemCard({
         </div>
         <div className="sub-label">Indoor head type</div>
         <div className="minihead-row">
-          {HEAD_TYPES.map((t) => (
+          {(HEAD_TYPES || []).map((t) => (
             <button
               key={t.id}
               type="button"
@@ -358,7 +359,7 @@ export default function SystemCard({
         <div className="muted">Multi-split not available for this brand.</div>
       );
 
-    const tbl = MULTI_HEAD[system.brand] || MULTI_HEAD.goodman;
+    const tbl = MULTI_HEAD?.[system.brand] || MULTI_HEAD?.goodman || {};
     const projectTierMult = miniTierMult(project.tier);
     const heads = system.heads || [];
 
@@ -456,7 +457,7 @@ export default function SystemCard({
                       update({ heads: newHeads });
                     }}
                   >
-                    {HEAD_TYPES.map((t) => (
+                    {(HEAD_TYPES || []).map((t) => (
                       <option key={t.id} value={t.id}>
                         {t.name}
                       </option>
@@ -471,7 +472,7 @@ export default function SystemCard({
                       update({ heads: newHeads });
                     }}
                   >
-                    {HEAD_BTU.map((t) => (
+                    {(HEAD_BTU || []).map((t) => (
                       <option key={t.id} value={t.id}>
                         {t.name}
                       </option>
@@ -612,9 +613,9 @@ export default function SystemCard({
               className={`systype-seg ${system.sysType === t.id ? "active" : ""}`}
               onClick={() => handleSysTypeChange(t.id)}
             >
-              <div className="st-ic">{t.icon}</div>
+              <div className="st-ic">{t.id === "ducted" ? <Icons.duct /> : t.id === "mini" ? <Icons.mini /> : <Icons.multi />}</div>
               <div className="st-name">{t.name}</div>
-              <div className="st-sub">{t.sub}</div>
+              <div className="st-sub">{t.desc}</div>
             </button>
           ))}
         </div>
@@ -667,7 +668,7 @@ export default function SystemCard({
 
             <div className="sub-label">System size (tonnage)</div>
             <div className="ton-grid">
-              {TON_OPTS.map((o) => (
+              {(TON_OPTS || []).map((o) => (
                 <button
                   key={o.ton}
                   type="button"
@@ -681,7 +682,7 @@ export default function SystemCard({
                       project.anchor -
                         o.down * PER_TON +
                         brandOf(system).delta +
-                        (tiers.find((x) => x.id === system.tier) || tiers[0])
+                        ((tiers || []).find((x) => x.id === system.tier) || (tiers || [])[0])
                           ?.delta,
                     )}
                   </div>
