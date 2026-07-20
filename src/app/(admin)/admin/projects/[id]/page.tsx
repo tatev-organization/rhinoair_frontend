@@ -3,17 +3,31 @@
 import React from 'react';
 import Link from 'next/link';
 import { Icons } from '@/components/ui/Icons';
-import { useGetProjectByIdQuery, useUpdateTaskStatusMutation } from '@/redux/features/admin/adminApi';
+import {
+  useGetProjectByIdQuery,
+  useUpdateTaskStatusMutation,
+  useUploadAdminDocumentMutation,
+  useUploadAdminPhotoMutation,
+  useGetAdminDocumentsQuery,
+  useGetAdminPhotosQuery,
+} from '@/redux/features/admin/adminApi';
 
 export default function AdminProjectDetailsPage({ params }: { params: Promise<{ id: string }> }) {
   const unwrappedParams = React.use(params);
   const { data: response, isLoading, error } = useGetProjectByIdQuery(unwrappedParams.id);
   const [updateTaskStatus] = useUpdateTaskStatusMutation();
+  const [uploadDoc] = useUploadAdminDocumentMutation();
+  const [uploadPhoto] = useUploadAdminPhotoMutation();
+  
+  const { data: docsRes } = useGetAdminDocumentsQuery(unwrappedParams.id);
+  const { data: photosRes } = useGetAdminPhotosQuery(unwrappedParams.id);
 
   if (isLoading) return <div style={{ padding: 40, color: 'var(--tx-sub)' }}>Loading project details...</div>;
   if (error || !response?.success) return <div style={{ padding: 40, color: 'red' }}>Error loading project details</div>;
 
   const project = response.data;
+  const documents = docsRes?.data || [];
+  const photos = photosRes?.data || [];
   
   if (!project) return <div style={{ padding: 40, color: 'var(--tx-sub)' }}>Project not found</div>;
 
@@ -23,6 +37,22 @@ export default function AdminProjectDetailsPage({ params }: { params: Promise<{ 
       alert('Task status updated');
     } catch (err) {
       alert('Failed to update task status');
+    }
+  };
+
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>, type: 'doc' | 'photo') => {
+    if (!e.target.files || e.target.files.length === 0) return;
+    const file = e.target.files[0];
+    
+    try {
+      if (type === 'doc') {
+        await uploadDoc({ projectId: project.projectId, file }).unwrap();
+      } else {
+        await uploadPhoto({ projectId: project.projectId, file }).unwrap();
+      }
+      alert(`${type === 'doc' ? 'Document' : 'Photo'} uploaded successfully!`);
+    } catch (err) {
+      alert(`Failed to upload ${type}`);
     }
   };
 
@@ -139,6 +169,66 @@ export default function AdminProjectDetailsPage({ params }: { params: Promise<{ 
         ) : (
           <div style={{ color: 'var(--tx-sub)' }}>No invoices synced for this project yet.</div>
         )}
+      </div>
+
+      {/* Documents Panel */}
+      <div className="card" style={{ padding: '24px', marginBottom: '24px' }}>
+        <h3 style={{ fontSize: '1.2rem', fontWeight: 600, color: 'var(--tx-main)', marginBottom: '20px' }}>Documents &amp; Files</h3>
+        
+        {documents.map((doc: any) => (
+          <a key={doc.documentId} className="doc-row" href={doc.fileUrl} target="_blank" rel="noreferrer" style={{ display: 'flex', alignItems: 'center', padding: '12px 0', borderBottom: '1px solid var(--border)', textDecoration: 'none' }}>
+            <span style={{ marginRight: '16px', color: 'var(--tx-sub)' }}><Icons.doc /></span>
+            <div style={{ flex: 1 }}>
+              <div style={{ color: 'var(--tx-main)', fontWeight: 500, fontSize: '0.95rem' }}>{doc.name}</div>
+              <div style={{ color: 'var(--tx-sub)', fontSize: '0.85rem' }}>{doc.mimeType} &middot; {Math.round(doc.sizeBytes / 1024)} KB</div>
+            </div>
+            <span style={{ color: 'var(--tx-sub)' }}><Icons.dl /></span>
+          </a>
+        ))}
+
+        <div className="upload-note" style={{ marginTop: '20px', color: 'var(--tx-sub)', fontSize: '0.9rem' }}>Upload a document to share with the partner.</div>
+        <label className="dropzone" id="dropzone" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '30px', border: '2px dashed var(--border)', borderRadius: '8px', marginTop: '10px', cursor: 'pointer' }}>
+          <input type="file" onChange={(e) => handleFileUpload(e, 'doc')} style={{ display: 'none' }} />
+          <span className="dz-ico" style={{ marginBottom: '10px' }}>
+            <svg viewBox="0 0 24 24" fill="none" style={{ width: 32, height: 32 }}>
+              <path d="M12 16V5m0 0l-4 4m4-4l4 4" stroke="#5a9e2f" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round"/>
+              <path d="M5 19h14" stroke="#5a9e2f" strokeWidth="1.9" strokeLinecap="round"/>
+            </svg>
+          </span>
+          <span className="dz-text" style={{ textAlign: 'center' }}>
+            <b style={{ color: 'var(--tx-main)', display: 'block' }}>Upload a document</b>
+            <span className="dz-sub" style={{ color: 'var(--tx-sub)', fontSize: '0.85rem' }}>Click to browse &middot; PDF, DOC, etc.</span>
+          </span>
+        </label>
+      </div>
+
+      {/* Photos Panel */}
+      <div className="card" style={{ padding: '24px' }}>
+        <h3 style={{ fontSize: '1.2rem', fontWeight: 600, color: 'var(--tx-main)', marginBottom: '20px' }}>Project Photos</h3>
+        
+        <div className="photo-grid" style={{ display: 'flex', gap: '12px', flexWrap: 'wrap', marginBottom: '20px' }}>
+          {photos.map((photo: any) => (
+            <a key={photo.photoId} href={photo.imageUrl} target="_blank" rel="noreferrer" style={{ display: 'block', width: '100px', height: '100px', borderRadius: '8px', overflow: 'hidden', border: '1px solid var(--border)' }}>
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src={photo.imageUrl} alt={photo.title} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+            </a>
+          ))}
+        </div>
+
+        <div className="upload-note" style={{ color: 'var(--tx-sub)', fontSize: '0.9rem' }}>Upload a photo to this project.</div>
+        <label className="dropzone" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '30px', border: '2px dashed var(--border)', borderRadius: '8px', marginTop: '10px', cursor: 'pointer' }}>
+          <input type="file" accept="image/*" onChange={(e) => handleFileUpload(e, 'photo')} style={{ display: 'none' }} />
+          <span className="dz-ico" style={{ marginBottom: '10px' }}>
+            <svg viewBox="0 0 24 24" fill="none" style={{ width: 32, height: 32 }}>
+              <path d="M12 16V5m0 0l-4 4m4-4l4 4" stroke="#5a9e2f" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round"/>
+              <path d="M5 19h14" stroke="#5a9e2f" strokeWidth="1.9" strokeLinecap="round"/>
+            </svg>
+          </span>
+          <span className="dz-text" style={{ textAlign: 'center' }}>
+            <b style={{ color: 'var(--tx-main)', display: 'block' }}>Upload a photo</b>
+            <span className="dz-sub" style={{ color: 'var(--tx-sub)', fontSize: '0.85rem' }}>Click to browse &middot; JPG, PNG</span>
+          </span>
+        </label>
       </div>
     </>
   );

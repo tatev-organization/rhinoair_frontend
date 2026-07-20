@@ -64,6 +64,38 @@ export const adminApi = baseApi.injectEndpoints({
       query: (companyId) => `/admin/partners/${companyId}/quotes`,
       providesTags: (result, error, id) => [{ type: 'Partners', id: `quotes-${id}` }],
     }),
+    uploadAdminDocument: builder.mutation<any, { projectId: string; file: File }>({
+      query: ({ projectId, file }) => {
+        const formData = new FormData();
+        formData.append('file', file);
+        return {
+          url: `/admin/projects/${projectId}/documents`,
+          method: 'POST',
+          body: formData,
+        };
+      },
+      invalidatesTags: (result, error, { projectId }) => [{ type: 'Project', id: projectId }],
+    }),
+    uploadAdminPhoto: builder.mutation<any, { projectId: string; file: File }>({
+      query: ({ projectId, file }) => {
+        const formData = new FormData();
+        formData.append('file', file);
+        return {
+          url: `/admin/projects/${projectId}/photos`,
+          method: 'POST',
+          body: formData,
+        };
+      },
+      invalidatesTags: (result, error, { projectId }) => [{ type: 'Project', id: projectId }],
+    }),
+    getAdminDocuments: builder.query<any, string>({
+      query: (projectId) => `/admin/projects/${projectId}/documents`,
+      providesTags: (result, error, projectId) => [{ type: 'Project', id: projectId }],
+    }),
+    getAdminPhotos: builder.query<any, string>({
+      query: (projectId) => `/admin/projects/${projectId}/photos`,
+      providesTags: (result, error, projectId) => [{ type: 'Project', id: projectId }],
+    }),
   }),
 });
 
@@ -79,4 +111,9 @@ export const {
   useUpdateTaskStatusMutation,
   useUpdatePartnerTierMutation,
   useGetPartnerQuotesQuery,
+  useUploadAdminDocumentMutation,
+  useUploadAdminPhotoMutation,
+  useGetAdminDocumentsQuery,
+  useGetAdminPhotosQuery,
 } = adminApi;
+
