@@ -40,7 +40,7 @@ export function PartnerListTable() {
             <h2 style={{ margin: 0, fontSize: '1.25rem', fontWeight: 600, color: '#111827' }}>Registered Partners</h2>
             <p style={{ margin: '4px 0 0 0', fontSize: '0.875rem', color: '#6b7280' }}>Manage partner companies and their ServiceTitan integration.</p>
           </div>
-          <button 
+          {/* <button 
             className="btn-primary" 
             style={{ display: 'flex', alignItems: 'center', gap: '8px' }}
             onClick={() => alert('Onboarding flow coming soon!')}
@@ -49,7 +49,7 @@ export function PartnerListTable() {
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
             </svg>
             Onboard Partner
-          </button>
+          </button> */}
         </div>
 
         <div style={{ overflowX: 'auto' }}>

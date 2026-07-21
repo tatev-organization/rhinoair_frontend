@@ -1754,9 +1754,29 @@ document.getElementById("confirmSubmitBtn").addEventListener("click", () => {
   updateConfirmCta();
 
   const payload = buildQuotePayload(null);
-  // FUTURE EMAIL HOOK: send `payload` to Rhino Air office inbox here (form service or backend endpoint).
-  // e.g. fetch('https://YOUR-ENDPOINT', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(payload)});
-  console.log("Quote confirmed (ready to email):", payload);
+  
+  // Submit quote to backend, save to DB, sync to ST, and trigger email
+  const token = localStorage.getItem('accessToken');
+  fetch('http://localhost:3001/api/v1/quotes', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': 'Bearer ' + (token || '')
+    },
+    body: JSON.stringify({
+      builderName: payload.builder || 'Unknown Builder',
+      total: payload.grandTotal,
+      payload: payload,
+      projectAddress: payload.projectAddress || '',
+      scope: payload.systems.map(s => s.sizeLabel).join(', '),
+      tierLabel: `Tier ${payload.tier}`
+    })
+  })
+  .then(res => res.json())
+  .then(data => console.log('Quote saved and emailed successfully:', data))
+  .catch(err => console.error('Quote save failed:', err));
+
+  console.log("Quote confirmed:", payload);
 
   // populate success message
   document.getElementById("csBuilder").textContent =
