@@ -8,7 +8,6 @@ export const baseApi = createApi({
     prepareHeaders: (headers, { getState }) => {
       let token = (getState() as RootState).auth.token;
       
-      // Fallback to localStorage in case Redux state hasn't hydrated properly in Next.js
       if (!token && typeof window !== 'undefined') {
         token = localStorage.getItem('accessToken');
       }
