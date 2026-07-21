@@ -64,9 +64,10 @@ export const adminApi = baseApi.injectEndpoints({
       query: (companyId) => `/admin/partners/${companyId}/quotes`,
       providesTags: (result, error, id) => [{ type: 'Partners', id: `quotes-${id}` }],
     }),
-    uploadAdminDocument: builder.mutation<any, { projectId: string; file: File }>({
-      query: ({ projectId, file }) => {
+    uploadAdminDocument: builder.mutation<any, { projectId: string; file: File; category: string }>({
+      query: ({ projectId, file, category }) => {
         const formData = new FormData();
+        formData.append('category', category);
         formData.append('file', file);
         return {
           url: `/admin/projects/${projectId}/documents`,
@@ -76,9 +77,10 @@ export const adminApi = baseApi.injectEndpoints({
       },
       invalidatesTags: (result, error, { projectId }) => [{ type: 'Project', id: projectId }],
     }),
-    uploadAdminPhoto: builder.mutation<any, { projectId: string; file: File }>({
-      query: ({ projectId, file }) => {
+    uploadAdminPhoto: builder.mutation<any, { projectId: string; file: File; phase: string }>({
+      query: ({ projectId, file, phase }) => {
         const formData = new FormData();
+        formData.append('phase', phase);
         formData.append('file', file);
         return {
           url: `/admin/projects/${projectId}/photos`,

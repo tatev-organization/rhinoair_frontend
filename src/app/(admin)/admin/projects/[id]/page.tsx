@@ -1,6 +1,6 @@
 'use client';
 
-import React from 'react';
+import React, { useState } from 'react';
 import Link from 'next/link';
 import { Icons } from '@/components/ui/Icons';
 import {
@@ -11,6 +11,8 @@ import {
   useGetAdminDocumentsQuery,
   useGetAdminPhotosQuery,
 } from '@/redux/features/admin/adminApi';
+import { UploadDocumentModal } from '@/components/ui/UploadDocumentModal';
+import { UploadPhotoModal } from '@/components/ui/UploadPhotoModal';
 
 export default function AdminProjectDetailsPage({ params }: { params: Promise<{ id: string }> }) {
   const unwrappedParams = React.use(params);
@@ -21,6 +23,12 @@ export default function AdminProjectDetailsPage({ params }: { params: Promise<{ 
   
   const { data: docsRes } = useGetAdminDocumentsQuery(unwrappedParams.id);
   const { data: photosRes } = useGetAdminPhotosQuery(unwrappedParams.id);
+
+  const [isDocModalOpen, setIsDocModalOpen] = useState(false);
+  const [selectedDocFile, setSelectedDocFile] = useState<File | null>(null);
+  
+  const [isPhotoModalOpen, setIsPhotoModalOpen] = useState(false);
+  const [selectedPhotoFile, setSelectedPhotoFile] = useState<File | null>(null);
 
   if (isLoading) return <div style={{ padding: 40, color: 'var(--tx-sub)' }}>Loading project details...</div>;
   if (error || !response?.success) return <div style={{ padding: 40, color: 'red' }}>Error loading project details</div>;
@@ -40,19 +48,16 @@ export default function AdminProjectDetailsPage({ params }: { params: Promise<{ 
     }
   };
 
-  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>, type: 'doc' | 'photo') => {
+  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>, type: 'doc' | 'photo') => {
     if (!e.target.files || e.target.files.length === 0) return;
     const file = e.target.files[0];
     
-    try {
-      if (type === 'doc') {
-        await uploadDoc({ projectId: project.projectId, file }).unwrap();
-      } else {
-        await uploadPhoto({ projectId: project.projectId, file }).unwrap();
-      }
-      alert(`${type === 'doc' ? 'Document' : 'Photo'} uploaded successfully!`);
-    } catch (err) {
-      alert(`Failed to upload ${type}`);
+    if (type === 'doc') {
+      setSelectedDocFile(file);
+      setIsDocModalOpen(true);
+    } else {
+      setSelectedPhotoFile(file);
+      setIsPhotoModalOpen(true);
     }
   };
 
@@ -180,7 +185,9 @@ export default function AdminProjectDetailsPage({ params }: { params: Promise<{ 
             <span style={{ marginRight: '16px', color: 'var(--tx-sub)' }}><Icons.doc /></span>
             <div style={{ flex: 1 }}>
               <div style={{ color: 'var(--tx-main)', fontWeight: 500, fontSize: '0.95rem' }}>{doc.name}</div>
-              <div style={{ color: 'var(--tx-sub)', fontSize: '0.85rem' }}>{doc.mimeType} &middot; {Math.round(doc.sizeBytes / 1024)} KB</div>
+              <div style={{ color: 'var(--tx-sub)', fontSize: '0.85rem' }}>
+                {doc.category || 'Shared Files'} &middot; {doc.mimeType} &middot; {Math.round(doc.sizeBytes / 1024)} KB
+              </div>
             </div>
             <span style={{ color: 'var(--tx-sub)' }}><Icons.dl /></span>
           </a>
@@ -206,16 +213,34 @@ export default function AdminProjectDetailsPage({ params }: { params: Promise<{ 
       <div className="card" style={{ padding: '24px' }}>
         <h3 style={{ fontSize: '1.2rem', fontWeight: 600, color: 'var(--tx-main)', marginBottom: '20px' }}>Project Photos</h3>
         
-        <div className="photo-grid" style={{ display: 'flex', gap: '12px', flexWrap: 'wrap', marginBottom: '20px' }}>
-          {photos.map((photo: any) => (
-            <a key={photo.photoId} href={photo.imageUrl} target="_blank" rel="noreferrer" style={{ display: 'block', width: '100px', height: '100px', borderRadius: '8px', overflow: 'hidden', border: '1px solid var(--border)' }}>
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={photo.imageUrl} alt={photo.title} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-            </a>
-          ))}
-        </div>
+        {['Rough-in · Pre-cover Proof', 'Finish & Completion', 'Other'].map(phase => {
+          const phasePhotos = photos.filter((p: any) => p.phase === phase || (!p.phase && phase === 'Other'));
+          if (phasePhotos.length === 0 && phase === 'Other') return null;
 
-        <div className="upload-note" style={{ color: 'var(--tx-sub)', fontSize: '0.9rem' }}>Upload a photo to this project.</div>
+          return (
+            <div key={phase} style={{ marginBottom: '24px' }}>
+              <div style={{ fontSize: '1.05rem', fontWeight: 500, color: 'var(--tx-main)', marginBottom: '12px' }}>
+                {phase}
+              </div>
+              {phasePhotos.length > 0 ? (
+                <div className="photo-grid" style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
+                  {phasePhotos.map((photo: any) => (
+                    <a key={photo.photoId} href={photo.imageUrl} target="_blank" rel="noreferrer" style={{ display: 'block', width: '100px', height: '100px', borderRadius: '8px', overflow: 'hidden', border: '1px solid var(--border)' }}>
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img src={photo.imageUrl} alt={photo.title} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                    </a>
+                  ))}
+                </div>
+              ) : (
+                <div style={{ color: 'var(--tx-sub)', fontSize: '0.9rem', fontStyle: 'italic' }}>
+                  No photos uploaded for this phase yet.
+                </div>
+              )}
+            </div>
+          );
+        })}
+
+        <div className="upload-note" style={{ color: 'var(--tx-sub)', fontSize: '0.9rem', marginTop: '10px' }}>Upload a photo to this project.</div>
         <label className="dropzone" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '30px', border: '2px dashed var(--border)', borderRadius: '8px', marginTop: '10px', cursor: 'pointer' }}>
           <input type="file" accept="image/*" onChange={(e) => handleFileUpload(e, 'photo')} style={{ display: 'none' }} />
           <span className="dz-ico" style={{ marginBottom: '10px' }}>
@@ -230,6 +255,22 @@ export default function AdminProjectDetailsPage({ params }: { params: Promise<{ 
           </span>
         </label>
       </div>
+
+      <UploadDocumentModal 
+        isOpen={isDocModalOpen}
+        onClose={() => setIsDocModalOpen(false)}
+        projectId={unwrappedParams.id}
+        initialFile={selectedDocFile}
+        uploadFn={async (formData) => uploadDoc({ projectId: unwrappedParams.id, file: formData.get('file') as File, category: formData.get('category') as string }).unwrap()}
+      />
+
+      <UploadPhotoModal
+        isOpen={isPhotoModalOpen}
+        onClose={() => setIsPhotoModalOpen(false)}
+        projectId={unwrappedParams.id}
+        initialFile={selectedPhotoFile}
+        uploadFn={async (formData) => uploadPhoto({ projectId: unwrappedParams.id, file: formData.get('file') as File, phase: formData.get('phase') as string }).unwrap()}
+      />
     </>
   );
 }

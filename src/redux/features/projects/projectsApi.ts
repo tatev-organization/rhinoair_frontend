@@ -10,7 +10,17 @@ export const projectsApi = baseApi.injectEndpoints({
       query: (projectId) => `/projects/${projectId}`,
       providesTags: (result, error, id) => [{ type: 'Project', id }],
     }),
+    uploadDocument: builder.mutation<any, FormData>({
+      query: (formData) => ({
+        url: '/documents/upload',
+        method: 'POST',
+        body: formData,
+      }),
+      invalidatesTags: (result, error, formData) => [
+        { type: 'Project', id: formData.get('projectId') as string },
+      ],
+    }),
   }),
 });
 
-export const { useGetMyProjectsQuery, useGetProjectByIdQuery } = projectsApi;
+export const { useGetMyProjectsQuery, useGetProjectByIdQuery, useUploadDocumentMutation } = projectsApi;

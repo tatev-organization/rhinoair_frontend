@@ -21,7 +21,7 @@ import {
   ZONE_ADDL,
   NEST_RATE,
 } from "./calculatorData";
-import { useSubmitQuoteMutation } from "../../redux/api/quoteApi";
+import { useSubmitQuoteMutation, useUpdateQuoteMutation } from "../../redux/api/quoteApi";
 
 interface ConfirmModalProps {
   show: boolean;
@@ -30,6 +30,8 @@ interface ConfirmModalProps {
   systems: SystemState[];
   onConfirm: () => void;
   onPrint: () => void;
+  projectId?: string;
+  quoteId?: string;
 }
 
 export default function ConfirmModal({
@@ -39,9 +41,13 @@ export default function ConfirmModal({
   systems,
   onConfirm,
   onPrint,
+  projectId,
+  quoteId,
 }: ConfirmModalProps) {
   const [submitted, setSubmitted] = useState(false);
-  const [submitQuote, { isLoading }] = useSubmitQuoteMutation();
+  const [submitQuote, { isLoading: isSubmitting }] = useSubmitQuoteMutation();
+  const [updateQuote, { isLoading: isUpdating }] = useUpdateQuoteMutation();
+  const isLoading = isSubmitting || isUpdating;
 
   if (!show) return null;
 
@@ -166,7 +172,7 @@ export default function ConfirmModal({
 
   const handleSubmit = async () => {
     try {
-      await submitQuote({
+      const payloadData = {
         builderName: project.builder,
         projectAddress: project.address,
         scope: `${systems.length} System(s)`,
@@ -174,7 +180,14 @@ export default function ConfirmModal({
         total: grand,
         payload: { project, systems },
         stCustomerId: project.stCustomerId,
-      }).unwrap();
+        projectId,
+      };
+
+      if (quoteId) {
+        await updateQuote({ id: quoteId, data: payloadData }).unwrap();
+      } else {
+        await submitQuote(payloadData).unwrap();
+      }
       
       onConfirm();
       setSubmitted(true);

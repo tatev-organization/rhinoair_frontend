@@ -15,6 +15,8 @@ import ConfirmModal from "./ConfirmModal";
 import { TIER_ANCHORS, setPricingConfig } from "./calculatorData";
 import { useGetPricingConfigQuery } from "../../redux/api/pricingApi";
 import { useGetMeQuery } from "../../redux/features/auth/authApi";
+import { useGetProjectByIdQuery } from "../../redux/features/projects/projectsApi";
+import { useGetQuoteByIdQuery } from "../../redux/api/quoteApi";
 import "./calculator.css";
 
 const newSystem = (id: number): SystemState => ({
@@ -44,7 +46,7 @@ const defaultProject: ProjectState = {
   revisedFrom: "",
 };
 
-export default function Calculator() {
+export default function Calculator({ projectId, quoteId }: { projectId?: string; quoteId?: string }) {
   const [project, setProject] = useState<ProjectState>(defaultProject);
   const [systems, setSystems] = useState<SystemState[]>([newSystem(1)]);
   const [nextSysId, setNextSysId] = useState(2);
@@ -52,6 +54,8 @@ export default function Calculator() {
   const [configLoaded, setConfigLoaded] = useState(false);
   const { data: config, isLoading, isError } = useGetPricingConfigQuery();
   const { data: userProfile } = useGetMeQuery(undefined);
+  const { data: existingProjectResponse, isLoading: isLoadingExisting } = useGetProjectByIdQuery(projectId as string, { skip: !projectId });
+  const { data: existingQuote, isLoading: isLoadingQuote } = useGetQuoteByIdQuery(quoteId as string, { skip: !quoteId });
 
   useEffect(() => {
     if (config?.data) {
@@ -66,6 +70,15 @@ export default function Calculator() {
       const customers = unwrappedProfile.company.stCustomers || [];
       const firstCustomer = customers[0];
       setProject((prev) => {
+        // If we already set these from an existing project, don't overwrite them
+        if (projectId && prev.builder !== "No Builder Assigned") {
+          return {
+            ...prev,
+            tier: unwrappedProfile.company.tier || 4,
+            anchor: TIER_ANCHORS[unwrappedProfile.company.tier || 4] || prev.anchor,
+          };
+        }
+
         const tier = unwrappedProfile.company.tier || 4;
         const anchor = TIER_ANCHORS[tier] || prev.anchor;
         
@@ -78,9 +91,36 @@ export default function Calculator() {
         };
       });
     }
-  }, [userProfile]);
+  }, [userProfile, projectId]);
 
   useEffect(() => {
+    if (projectId && existingProjectResponse?.data) {
+      const existingProject = existingProjectResponse.data;
+      setProject((prev) => ({
+        ...prev,
+        builder: existingProject.builderName || prev.builder,
+        address: existingProject.address || prev.address,
+        stCustomerId: existingProject.serviceTitanCustomerId || prev.stCustomerId, // Might need to fetch ST Customer ID if we have it, or rely on company defaults
+      }));
+    }
+  }, [projectId, existingProjectResponse]);
+
+  useEffect(() => {
+    if (quoteId && existingQuote) {
+      if (existingQuote.payload) {
+        if (existingQuote.payload.project) {
+          setProject(existingQuote.payload.project);
+        }
+        if (existingQuote.payload.systems) {
+          setSystems(existingQuote.payload.systems);
+          setNextSysId(Math.max(...existingQuote.payload.systems.map((s: any) => s.id)) + 1);
+        }
+      }
+    }
+  }, [quoteId, existingQuote]);
+
+  useEffect(() => {
+    if (quoteId) return; // Don't generate new date/id if editing existing quote
     const quoteDate = new Date();
     const expiry = new Date();
     expiry.setDate(expiry.getDate() + 30);
@@ -147,7 +187,7 @@ export default function Calculator() {
   const tierAdj =
     ref && ref.sysType === "ducted" ? brandOf(ref).delta + effOf(ref).delta : 0;
 
-  if (isLoading || !configLoaded) {
+  if (isLoading || !configLoaded || isLoadingExisting || isLoadingQuote) {
     return (
       <div className="flex h-screen items-center justify-center bg-gray-50 dark:bg-gray-900">
         <div className="text-lg font-medium text-gray-500">Loading calculator...</div>
@@ -209,6 +249,20 @@ export default function Calculator() {
                 {(() => {
                   const unwrappedProfile = userProfile?.data || userProfile;
                   const customers = unwrappedProfile?.company?.stCustomers || [];
+                  
+                  if (projectId || quoteId) {
+                    return (
+                      <input
+                        id="builderName"
+                        className="locked-input"
+                        type="text"
+                        readOnly
+                        value={project.builder}
+                        disabled
+                      />
+                    );
+                  }
+
                   return customers.length > 1 ? (
                     <select
                       id="builderName"
@@ -250,6 +304,9 @@ export default function Calculator() {
                   onChange={(e) =>
                     setProject({ ...project, address: e.target.value })
                   }
+                  readOnly={!!projectId || !!quoteId}
+                  disabled={!!projectId || !!quoteId}
+                  style={(projectId || quoteId) ? { backgroundColor: '#f5f5f5', color: '#666' } : {}}
                 />
               </div>
             </div>
@@ -401,6 +458,8 @@ export default function Calculator() {
           ) as HTMLButtonElement | null;
           btn?.click();
         }}
+        projectId={projectId}
+        quoteId={quoteId}
       />
       <div id="printDoc" aria-hidden="true"></div>
     </div>

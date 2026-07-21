@@ -10,7 +10,19 @@ export const quoteApi = baseApi.injectEndpoints({
       }),
       invalidatesTags: ['Quote'],
     }),
+    getQuoteById: builder.query<any, string>({
+      query: (id) => `/quotes/${id}`,
+      providesTags: ['Quote'],
+    }),
+    updateQuote: builder.mutation<any, { id: string; data: any }>({
+      query: ({ id, data }) => ({
+        url: `/quotes/${id}`,
+        method: 'PATCH',
+        body: data,
+      }),
+      invalidatesTags: ['Quote', 'Project'],
+    }),
   }),
 });
 
-export const { useSubmitQuoteMutation } = quoteApi;
+export const { useSubmitQuoteMutation, useGetQuoteByIdQuery, useUpdateQuoteMutation } = quoteApi;

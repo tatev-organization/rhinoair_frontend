@@ -3,8 +3,10 @@
 import React, { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import { Icons } from '@/components/ui/Icons';
+import { UploadDocumentModal } from '@/components/ui/UploadDocumentModal';
 
 import { useGetProjectByIdQuery } from '@/redux/features/projects/projectsApi';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 
 // ── Status tracker data (mirrors build_portal.py exactly) ───────────────────
 const mapStatusToState = (status: string) => {
@@ -63,10 +65,15 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
   const unwrappedParams = React.use(params);
   const { data: response, isLoading } = useGetProjectByIdQuery(unwrappedParams.id);
   const project = response?.data;
+  
+  // Upload modal state
+  const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
 
   const [tab, setTab] = useState('status');
   const [co02State, setCo02State] = useState<'pending' | 'approved' | 'declined'>('pending');
   const [adjustedTotal, setAdjustedTotal] = useState(CO_BASE + CO_APPROVED);
+  const [selectedQuote, setSelectedQuote] = useState<any>(null);
 
   useEffect(() => {
     const hash = window.location.hash.replace('#', '');
@@ -209,126 +216,203 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
     </div>
   );
 
-  const DocumentsPanel = () => (
-    <div className="panel" data-panel="documents">
-      <div className="section-label">
-        Plans &amp; Blueprints
-        <span className="right">
-          <a href="#" onClick={e => e.preventDefault()}>Download all &darr;</a>
-        </span>
+  const DocumentsPanel = () => {
+    // Group documents by category
+    const groupedDocs: Record<string, any[]> = {};
+    const categories = [
+      'Plans & Blueprints',
+      'Estimate',
+      'Agreements',
+      'Change Orders',
+      'Submittals & Spec Sheets',
+      'Permits',
+      'Certificates',
+      'Shared Files'
+    ];
+    
+    // Initialize empty groups
+    categories.forEach(cat => groupedDocs[cat] = []);
+    
+    // Add real documents
+    if (project?.documents) {
+      project.documents.forEach((doc: any) => {
+        const cat = doc.category || 'Shared Files';
+        if (!groupedDocs[cat]) groupedDocs[cat] = [];
+        groupedDocs[cat].push(doc);
+      });
+    }
+
+    const handleFileDrop = (e: React.ChangeEvent<HTMLInputElement>) => {
+      const file = e.target.files?.[0];
+      if (file) {
+        setSelectedFile(file);
+        setIsUploadModalOpen(true);
+      }
+      e.target.value = ''; // Reset input
+    };
+
+    return (
+      <div className="panel" data-panel="documents">
+        {categories.map((cat, i) => {
+          const docs = groupedDocs[cat];
+          // Determine if we should show this category. 
+          // Always show Shared Files at the end, and show others if they have docs or if it's a critical category.
+          if (docs.length === 0 && cat !== 'Shared Files') return null;
+          
+          return (
+            <React.Fragment key={cat}>
+              <div className="section-label" style={i > 0 ? { marginTop: '30px' } : {}}>
+                {cat}
+                {docs.length > 0 && (
+                  <span className="right">
+                    <a href="#" onClick={e => e.preventDefault()}>Download all &darr;</a>
+                  </span>
+                )}
+                {cat === 'Shared Files' && docs.length === 0 && (
+                  <span className="right">Uploaded by you &amp; Rhino Air</span>
+                )}
+              </div>
+              
+              {docs.map(doc => {
+                const isPending = doc.status === 'PENDING';
+                const DocIcon = (Icons as any)[doc.icon || 'doc'] || Icons.doc;
+                
+                if (isPending) {
+                  return <DocPending key={doc.documentId} icon={<DocIcon />} name={doc.name} />;
+                }
+                
+                // Format size
+                const sizeStr = doc.sizeBytes ? `${(doc.sizeBytes / 1024 / 1024).toFixed(1)} MB` : '';
+                const dateStr = new Date(doc.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+                const ext = doc.name.split('.').pop()?.toUpperCase() || 'FILE';
+                const meta = `${ext} ${sizeStr ? '· ' + sizeStr : ''} · ${dateStr}`;
+                
+                const isSigned = doc.status === 'SIGNED' ? signed : undefined;
+                
+                return (
+                  <DocRow 
+                    key={doc.documentId} 
+                    icon={<DocIcon />} 
+                    name={doc.name} 
+                    meta={meta} 
+                    badge={isSigned} 
+                  />
+                );
+              })}
+              
+              {cat === 'Shared Files' && (
+                <>
+                  <div className="upload-note">Drop a file you&rsquo;d like to share on this project &mdash; a revised plan, a photo, an inspection note. Visible to both your team and Rhino Air.</div>
+                  <div id="sharedList"></div>
+                  <div className="dropzone cursor-pointer" id="dropzone" onClick={() => { setSelectedFile(null); setIsUploadModalOpen(true); }}>
+                    <span className="dz-ico">
+                      <svg viewBox="0 0 24 24" fill="none">
+                        <path d="M12 16V5m0 0l-4 4m4-4l4 4" stroke="#5a9e2f" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round"/>
+                        <path d="M5 19h14" stroke="#5a9e2f" strokeWidth="1.9" strokeLinecap="round"/>
+                      </svg>
+                    </span>
+                    <span className="dz-text">
+                      <b>Upload a document</b>
+                      <span className="dz-sub">Click to browse or drag a file here &middot; up to 25 MB</span>
+                    </span>
+                  </div>
+                </>
+              )}
+            </React.Fragment>
+          );
+        })}
       </div>
-      <DocRow icon={<Icons.plan />} name="Mechanical plan set (T24, ductwork, schedules)" meta="PDF · 2.4 MB · Jun 2, 2026" />
-      <DocRow icon={<Icons.plan />} name="Floor plans" meta="PDF · 1.1 MB · Jun 2, 2026" />
-      <DocRow icon={<Icons.plan />} name="RCP — Reflected ceiling plan" meta="PDF · 1.3 MB · Jun 2, 2026" />
-      <DocRow icon={<Icons.plan />} name="Structural plans" meta="PDF · 1.8 MB · Jun 2, 2026" />
-
-      <div className="section-label">Estimate</div>
-      <DocRow icon={<Icons.doc />} name="Installation estimate — RA-104872" meta="PDF · 180 KB · Jun 5, 2026" />
-
-      <div className="section-label">Agreements</div>
-      <DocRow icon={<Icons.sign />} name="Subcontract agreement" meta="PDF · 320 KB · Jun 8, 2026" badge={signed} />
-
-      <div className="section-label">Change Orders</div>
-      <DocRow icon={<Icons.sign />} name="CO-01 — Added third zone (master suite)" meta="PDF · 210 KB · Jun 14, 2026" badge={signed} />
-      <DocPending icon={<Icons.sign />} name="CO-02 — Concealed ducted head (home office)" />
-
-      <div className="section-label">Submittals &amp; Spec Sheets</div>
-      <DocRow icon={<Icons.spec />} name="Daikin VRV submittal package" meta="PDF · 4.2 MB · Jun 10, 2026" />
-      <DocRow icon={<Icons.spec />} name="Condenser cut sheet" meta="PDF · 600 KB · Jun 10, 2026" />
-
-      <div className="section-label">Permits</div>
-      <DocRow icon={<Icons.permit />} name="Mechanical permit" meta="PDF · 240 KB · Jun 12, 2026" />
-
-      <div className="section-label">Certificates</div>
-      <DocRow icon={<Icons.cert />} name="AHRI / Energy Star rating" meta="PDF · 150 KB · Jun 2, 2026" />
-      <DocPending icon={<Icons.cert />} name="HERS certificate (duct leakage & charge)" />
-      <DocPending icon={<Icons.cert />} name="Warranty certificate" />
-
-      <div className="section-label" style={{marginTop:'30px'}}>
-        Shared Files
-        <span className="right">Uploaded by you &amp; Rhino Air</span>
-      </div>
-      <div className="upload-note">Drop a file you&rsquo;d like to share on this project &mdash; a revised plan, a photo, an inspection note. Visible to both your team and Rhino Air.</div>
-      <div id="sharedList"></div>
-      <label className="dropzone" id="dropzone">
-        <input type="file" multiple style={{display:'none'}} />
-        <span className="dz-ico">
-          <svg viewBox="0 0 24 24" fill="none">
-            <path d="M12 16V5m0 0l-4 4m4-4l4 4" stroke="#5a9e2f" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round"/>
-            <path d="M5 19h14" stroke="#5a9e2f" strokeWidth="1.9" strokeLinecap="round"/>
-          </svg>
-        </span>
-        <span className="dz-text">
-          <b>Upload a document</b>
-          <span className="dz-sub">Click to browse or drag a file here &middot; up to 25 MB</span>
-        </span>
-      </label>
-    </div>
-  );
+    );
+  };
 
   // ── Photos panel ────────────────────────────────────────────────────────────
-  const PhotosPanel = () => (
-    <div className="panel" data-panel="photos">
-      <div className="section-label">
-        Rough-in &middot; Pre-cover Proof
-        <span className="right"><a href="#" onClick={e=>e.preventDefault()}>Download all &darr;</a></span>
-      </div>
-      <div className="photo-grid">
-        {[0,1,2,3,4].map(i => (
-          <div key={i} className="photo-tile" onClick={() => {}}>
-            <Icons.photo style={{width:30,height:30,opacity:.32}} />
+  const PhotosPanel = () => {
+    const roughInPhotos = project?.photos?.filter((p: any) => p.phase === 'Rough-in · Pre-cover Proof') || [];
+    const finishPhotos = project?.photos?.filter((p: any) => p.phase === 'Finish & Completion') || [];
+    const otherPhotos = project?.photos?.filter((p: any) => p.phase === 'Other') || [];
+
+    return (
+      <div className="panel" data-panel="photos">
+        <div className="section-label">
+          Rough-in &middot; Pre-cover Proof
+          {roughInPhotos.length > 0 && <span className="right"><a href="#" onClick={e=>e.preventDefault()}>Download all &darr;</a></span>}
+        </div>
+        {roughInPhotos.length > 0 ? (
+          <div className="photo-grid" style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
+            {roughInPhotos.map((photo: any) => (
+              <a key={photo.photoId} href={photo.imageUrl} target="_blank" rel="noreferrer" style={{ display: 'block', width: '100px', height: '100px', borderRadius: '8px', overflow: 'hidden', border: '1px solid var(--border)' }}>
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={photo.imageUrl} alt={photo.title} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+              </a>
+            ))}
           </div>
-        ))}
-        <div className="photo-tile more" onClick={() => {}}><span>+12</span></div>
+        ) : (
+          <div className="photo-empty">Photos available at completion</div>
+        )}
+
+        <div className="section-label" style={{marginTop:'26px'}}>Finish &amp; Completion</div>
+        {finishPhotos.length > 0 ? (
+          <div className="photo-grid" style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
+            {finishPhotos.map((photo: any) => (
+              <a key={photo.photoId} href={photo.imageUrl} target="_blank" rel="noreferrer" style={{ display: 'block', width: '100px', height: '100px', borderRadius: '8px', overflow: 'hidden', border: '1px solid var(--border)' }}>
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={photo.imageUrl} alt={photo.title} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+              </a>
+            ))}
+          </div>
+        ) : (
+          <div className="photo-empty">Photos available at completion</div>
+        )}
+
+        {otherPhotos.length > 0 && (
+          <>
+            <div className="section-label" style={{marginTop:'26px'}}>Other Photos</div>
+            <div className="photo-grid" style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
+              {otherPhotos.map((photo: any) => (
+                <a key={photo.photoId} href={photo.imageUrl} target="_blank" rel="noreferrer" style={{ display: 'block', width: '100px', height: '100px', borderRadius: '8px', overflow: 'hidden', border: '1px solid var(--border)' }}>
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={photo.imageUrl} alt={photo.title} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                </a>
+              ))}
+            </div>
+          </>
+        )}
       </div>
-      <div className="section-label" style={{marginTop:'26px'}}>Finish &amp; Completion</div>
-      <div className="photo-empty">Photos available at completion</div>
-    </div>
-  );
+    );
+  };
 
   // ── Estimate panel ──────────────────────────────────────────────────────────
   const EstimatePanel = () => (
     <div className="panel" data-panel="estimate">
       <div className="section-label">
         Estimate History
-        <span className="right"><a href="/calculator">New version &rarr;</a></span>
+        <span className="right"><Link href={`/calculator?projectId=${unwrappedParams.id}`}>New version &rarr;</Link></span>
       </div>
-      <div className="est-card accepted">
-        <div className="est-info">
-          <div className="est-quote">
-            RA-104872
-            <span className="badge-accepted">Accepted</span>
-          </div>
-          <div className="est-scope">Daikin VRV &middot; 5-Ton &middot; 2 zones</div>
-          <div className="est-date">Tier 4 &middot; Jun 5, 2026</div>
+      
+      {(!project?.quotes || project.quotes.length === 0) && (
+        <div style={{ padding: 40, textAlign: 'center', color: 'var(--tx-sub)' }}>
+          No estimates found for this project.
         </div>
-        <div className="est-right">
-          <div className="est-price">$26,500</div>
-          <div className="est-actions">
-            <button className="btn-ghost" onClick={() => {}}>View</button>
-            <button className="btn-ghost" onClick={() => {}}>
-              <Icons.dl style={{color:'#0d1b1e'}} />
-            </button>
+      )}
+
+      {project?.quotes && project.quotes.map((q: any, idx: number) => (
+        <div className={`est-card ${idx === 0 ? 'accepted' : 'superseded'}`} key={q.quoteId}>
+          <div className="est-info">
+            <div className="est-quote">
+              {q.quoteNumber || `Quote #${q.quoteId.slice(0,6)}`}
+              {idx === 0 ? <span className="badge-accepted">Active</span> : <span className="badge-superseded">Previous</span>}
+            </div>
+            <div className="est-scope">{q.scope || 'N/A'}</div>
+            <div className="est-date">{q.tierLabel ? `Tier ${q.tierLabel.split(' ')[0]}` : 'N/A'} &middot; {new Date(q.createdAt).toLocaleDateString()}</div>
           </div>
-        </div>
-      </div>
-      <div className="est-card superseded">
-        <div className="est-info">
-          <div className="est-quote">
-            RA-104810
-            <span className="badge-superseded">Superseded</span>
-          </div>
-          <div className="est-scope">Goodman &middot; 5-Ton &middot; single zone</div>
-          <div className="est-date">Tier 4 &middot; May 28, 2026</div>
-        </div>
-        <div className="est-right">
-          <div className="est-price">$24,500</div>
-          <div className="est-actions">
-            <button className="btn-ghost">View</button>
-            <button className="btn-ghost"><Icons.dl style={{color:'#0d1b1e'}} /></button>
+          <div className="est-right">
+            <div className="est-price">${Number(q.total).toLocaleString()}</div>
+            <div className="est-actions">
+              <button className="btn-ghost" onClick={() => setSelectedQuote(q)}>View</button>
+            </div>
           </div>
         </div>
-      </div>
+      ))}
     </div>
   );
 
@@ -469,6 +553,67 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
       {tab === 'photos'    && <PhotosPanel />}
       {tab === 'estimate'  && <EstimatePanel />}
       {tab === 'invoices'  && <InvoicesPanel />}
+
+      <Dialog open={!!selectedQuote} onOpenChange={(open) => !open && setSelectedQuote(null)}>
+        <DialogContent style={{ maxWidth: 500, padding: 24 }} aria-describedby={undefined}>
+          <DialogHeader>
+            <DialogTitle style={{ marginBottom: 20 }}>Estimate {selectedQuote?.quoteNumber || (selectedQuote && `RA-${selectedQuote.quoteId.slice(0,6)}`)}</DialogTitle>
+          </DialogHeader>
+          
+          {selectedQuote && (
+            <>
+            <div style={{ fontSize: 28, fontWeight: 700, marginBottom: 24, color: 'var(--ink)' }}>
+              ${Number(selectedQuote.total).toLocaleString()}
+            </div>
+            
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 16, marginBottom: 32 }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid var(--border)', paddingBottom: 12 }}>
+                <span style={{ fontSize: 11, color: 'var(--tx-sub)', textTransform: 'uppercase', letterSpacing: 1 }}>Quote</span>
+                <span style={{ fontWeight: 600 }}>{selectedQuote.quoteNumber || `RA-${selectedQuote.quoteId.slice(0,6)}`}</span>
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid var(--border)', paddingBottom: 12 }}>
+                <span style={{ fontSize: 11, color: 'var(--tx-sub)', textTransform: 'uppercase', letterSpacing: 1 }}>Scope</span>
+                <span style={{ fontWeight: 600 }}>{selectedQuote.scope || 'N/A'}</span>
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid var(--border)', paddingBottom: 12 }}>
+                <span style={{ fontSize: 11, color: 'var(--tx-sub)', textTransform: 'uppercase', letterSpacing: 1 }}>Pricing Tier</span>
+                <span style={{ fontWeight: 600 }}>{selectedQuote.tierLabel || 'N/A'}</span>
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid var(--border)', paddingBottom: 12 }}>
+                <span style={{ fontSize: 11, color: 'var(--tx-sub)', textTransform: 'uppercase', letterSpacing: 1 }}>Date</span>
+                <span style={{ fontWeight: 600 }}>{new Date(selectedQuote.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</span>
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid var(--border)', paddingBottom: 12 }}>
+                <span style={{ fontSize: 11, color: 'var(--tx-sub)', textTransform: 'uppercase', letterSpacing: 1 }}>Status</span>
+                <span style={{ fontWeight: 600 }}>{
+                  selectedQuote.status === 'ACCEPTED' ? 'Accepted' :
+                  selectedQuote.status === 'REJECTED' ? 'Rejected' :
+                  selectedQuote.status === 'APPROVED' ? 'Approved' :
+                  selectedQuote.status === 'SUPERSEDED' ? 'Superseded' :
+                  selectedQuote.status === 'SUBMITTED' ? 'Submitted' :
+                  selectedQuote.status === 'DRAFT' ? 'Draft' :
+                  selectedQuote.status
+                }</span>
+              </div>
+            </div>
+
+            <div style={{ display: 'flex', gap: 12 }}>
+              <button className="btn-ghost" style={{ flex: 1, border: '1px solid var(--border)' }}>Download PDF</button>
+              <Link href={`/calculator?quoteId=${selectedQuote.quoteId}`} style={{ flex: 1, textAlign: 'center', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#0F2228', color: '#fff', fontWeight: 700, fontSize: 15, padding: '14px 22px', borderRadius: 12, textDecoration: 'none', transition: '.16s' }}>
+                Open in calculator
+              </Link>
+            </div>
+            </>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      <UploadDocumentModal 
+        isOpen={isUploadModalOpen} 
+        onClose={() => setIsUploadModalOpen(false)} 
+        projectId={unwrappedParams.id} 
+        initialFile={selectedFile} 
+      />
     </>
   );
 }
