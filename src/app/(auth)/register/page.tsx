@@ -51,8 +51,9 @@ export default function RegisterPage() {
 
     try {
       await register(formData).unwrap();
-      // On success, open OTP modal
-      setIsOtpModalOpen(true);
+      // On success, redirect to login directly
+      alert('Registration successful! You can now login.');
+      router.push('/login');
     } catch (err: any) {
       setError(err?.data?.message || 'Failed to register. Please try again.');
     }
