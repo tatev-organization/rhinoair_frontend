@@ -1757,7 +1757,8 @@ document.getElementById("confirmSubmitBtn").addEventListener("click", () => {
   
   // Submit quote to backend, save to DB, sync to ST, and trigger email
   const token = localStorage.getItem('accessToken');
-  fetch('http://localhost:3001/api/v1/quotes', {
+  const apiUrl = (typeof process !== 'undefined' && process.env.NEXT_PUBLIC_API_URL) || 'http://localhost:3001/api/v1';
+  fetch(`${apiUrl}/quotes`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
