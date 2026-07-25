@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { Icons } from '@/components/ui/Icons';
 import { UploadDocumentModal } from '@/components/ui/UploadDocumentModal';
 
-import { useGetProjectByIdQuery } from '@/redux/features/projects/projectsApi';
+import { useGetProjectByIdQuery, useDecideChangeOrderMutation } from '@/redux/features/projects/projectsApi';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 
 // ── Status tracker data (mirrors build_portal.py exactly) ───────────────────
@@ -57,10 +57,6 @@ function StItem({ name, state, pidx }: { name: string; state: string; pidx: numb
 }
 
 // ── Change-order state ───────────────────────────────────────────────────────
-const CO_BASE = 26500;
-const CO_PAID = 10600;
-const CO_APPROVED = 3200;
-
 export default function ProjectDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const unwrappedParams = React.use(params);
   const { data: response, isLoading } = useGetProjectByIdQuery(unwrappedParams.id);
@@ -71,10 +67,23 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
 
   const [tab, setTab] = useState('status');
-  const [co02State, setCo02State] = useState<'pending' | 'approved' | 'declined'>('pending');
-  const [adjustedTotal, setAdjustedTotal] = useState(CO_BASE + CO_APPROVED);
   const [selectedQuote, setSelectedQuote] = useState<any>(null);
+  const [processingCO, setProcessingCO] = useState<{ id: string, type: 'approve' | 'decline' } | null>(null);
 
+  const [decideChangeOrderMutation] = useDecideChangeOrderMutation();
+
+  const handleDecideCO = async (changeOrderId: string, isApproved: boolean) => {
+    setProcessingCO({ id: changeOrderId, type: isApproved ? 'approve' : 'decline' });
+    try {
+      await decideChangeOrderMutation({ projectId: unwrappedParams.id, changeOrderId, isApproved }).unwrap();
+      // Refetch is handled by RTK query invalidation or manual refresh if needed
+    } catch (error) {
+      console.error('Failed to decide CO', error);
+      alert('Failed to update change order.');
+    } finally {
+      setProcessingCO(null);
+    }
+  };
   useEffect(() => {
     const hash = window.location.hash.replace('#', '');
     if (['status','documents','photos','estimate','invoices'].includes(hash)) setTab(hash);
@@ -82,16 +91,10 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
 
   const switchTab = (t: string) => { setTab(t); window.location.hash = t; };
 
-  const decideCO = (approve: boolean) => {
-    if (approve) {
-      setCo02State('approved');
-      setAdjustedTotal(prev => prev + 1800);
-    } else {
-      setCo02State('declined');
-    }
-  };
-
   const dynamicPaid = project?.invoices?.filter((i: any) => i.status === 'PAID').reduce((acc: number, curr: any) => acc + parseFloat(curr.amount || 0), 0) || 0;
+  const coBase = parseFloat(project?.contractTotal || 0);
+  const coApprovedTotal = project?.changeOrders?.filter((co: any) => co.status === 'APPROVED').reduce((sum: number, co: any) => sum + parseFloat(co.amount || 0), 0) || 0;
+  const adjustedTotal = coBase + coApprovedTotal;
   const outstanding = adjustedTotal - dynamicPaid;
 
   // ── Status panel ────────────────────────────────────────────────────────────
@@ -423,7 +426,7 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
         <div className="balance-card">
           <div className="b-lbl">Contract total</div>
           <div className="b-num" id="bContract">${adjustedTotal.toLocaleString()}</div>
-          <div className="b-adj" id="bContractAdj">${CO_BASE.toLocaleString()} base + ${(adjustedTotal - CO_BASE).toLocaleString()} change orders</div>
+          <div className="b-adj" id="bContractAdj">${coBase.toLocaleString()} base + ${coApprovedTotal.toLocaleString()} change orders</div>
         </div>
         <div className="balance-card green">
           <div className="b-lbl">Paid to date</div>
@@ -439,58 +442,66 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
       <div className="section-label">
         Change Orders
         <span className="right" id="coNote">
-          {co02State === 'approved' ? '2 approved' : co02State === 'declined' ? '1 approved · 1 declined' : '1 approved · 1 awaiting you'}
+          {project?.changeOrders?.filter((co: any) => co.status === 'APPROVED').length || 0} approved
         </span>
       </div>
 
-      {/* CO-01: approved */}
-      <a className="inv-row co-row" href="#" onClick={e=>e.preventDefault()}>
-        <span className="inv-num">CO-01</span>
-        <div className="inv-for">
-          Added third zone &mdash; master suite
-          <div className="inv-date">Approved Jun 14, 2026</div>
-        </div>
-        <span className="inv-amount co-amt">+$3,200</span>
-        <span className="inv-badge paid">Approved</span>
-      </a>
-
-      {/* CO-02: pending / decided */}
-      {co02State === 'pending' && (
-        <div className="inv-row co-row co-pending" id="co02">
-          <span className="inv-num">CO-02</span>
-          <div className="inv-for">
-            Upgrade to concealed ducted head &mdash; home office
-            <div className="inv-date">Submitted Jun 18, 2026</div>
-          </div>
-          <span className="inv-amount co-amt">+$1,800</span>
-          <span className="inv-badge due">Pending you</span>
-          <div className="co-actions">
-            <button className="co-btn decline" onClick={() => decideCO(false)}>Decline</button>
-            <button className="co-btn approve" onClick={() => decideCO(true)}>Approve</button>
-          </div>
-        </div>
-      )}
-      {co02State === 'approved' && (
-        <a className="inv-row co-row" href="#" onClick={e=>e.preventDefault()}>
-          <span className="inv-num">CO-02</span>
-          <div className="inv-for">
-            Upgrade to concealed ducted head &mdash; home office
-            <div className="inv-date">Approved</div>
-          </div>
-          <span className="inv-amount co-amt">+$1,800</span>
-          <span className="inv-badge paid">Approved</span>
-        </a>
-      )}
-      {co02State === 'declined' && (
-        <a className="inv-row co-row declined-row" href="#" onClick={e=>e.preventDefault()}>
-          <span className="inv-num">CO-02</span>
-          <div className="inv-for">
-            Upgrade to concealed ducted head &mdash; home office
-            <div className="inv-date">Declined</div>
-          </div>
-          <span className="inv-amount co-amt" style={{opacity:.5,textDecoration:'line-through'}}>+$1,800</span>
-          <span className="inv-badge overdue">Declined</span>
-        </a>
+      {project?.changeOrders?.length > 0 ? project.changeOrders.map((co: any) => (
+        <React.Fragment key={co.changeOrderId}>
+          {co.status === 'PENDING' && (
+            <div className="inv-row co-row co-pending">
+              <span className="inv-num">{co.number}</span>
+              <div className="inv-for">
+                {co.title}
+                <div className="inv-date">Pending</div>
+              </div>
+              <span className="inv-amount co-amt">+${parseFloat(co.amount || 0).toLocaleString()}</span>
+              <span className="inv-badge due">Pending you</span>
+              <div className="co-actions">
+                <button 
+                  className="co-btn decline" 
+                  onClick={() => handleDecideCO(co.changeOrderId, false)}
+                  disabled={processingCO?.id === co.changeOrderId}
+                  style={{ opacity: processingCO?.id === co.changeOrderId ? 0.6 : 1, cursor: processingCO?.id === co.changeOrderId ? 'not-allowed' : 'pointer' }}
+                >
+                  {processingCO?.id === co.changeOrderId && processingCO?.type === 'decline' ? 'Declining...' : 'Decline'}
+                </button>
+                <button 
+                  className="co-btn approve" 
+                  onClick={() => handleDecideCO(co.changeOrderId, true)}
+                  disabled={processingCO?.id === co.changeOrderId}
+                  style={{ opacity: processingCO?.id === co.changeOrderId ? 0.6 : 1, cursor: processingCO?.id === co.changeOrderId ? 'not-allowed' : 'pointer' }}
+                >
+                  {processingCO?.id === co.changeOrderId && processingCO?.type === 'approve' ? 'Approving...' : 'Approve'}
+                </button>
+              </div>
+            </div>
+          )}
+          {co.status === 'APPROVED' && (
+            <a className="inv-row co-row" href="#" onClick={e=>e.preventDefault()}>
+              <span className="inv-num">{co.number}</span>
+              <div className="inv-for">
+                {co.title}
+                <div className="inv-date">Approved</div>
+              </div>
+              <span className="inv-amount co-amt">+${parseFloat(co.amount || 0).toLocaleString()}</span>
+              <span className="inv-badge paid">Approved</span>
+            </a>
+          )}
+          {co.status === 'DECLINED' && (
+            <a className="inv-row co-row declined-row" href="#" onClick={e=>e.preventDefault()}>
+              <span className="inv-num">{co.number}</span>
+              <div className="inv-for">
+                {co.title}
+                <div className="inv-date">Declined</div>
+              </div>
+              <span className="inv-amount co-amt" style={{opacity:.5,textDecoration:'line-through'}}>+${parseFloat(co.amount || 0).toLocaleString()}</span>
+              <span className="inv-badge overdue">Declined</span>
+            </a>
+          )}
+        </React.Fragment>
+      )) : (
+        <div style={{color:'#666', fontSize:'14px', marginTop:'8px'}}>No change orders found.</div>
       )}
 
       {/* Invoices */}

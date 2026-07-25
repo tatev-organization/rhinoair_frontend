@@ -20,7 +20,17 @@ export const projectsApi = baseApi.injectEndpoints({
         { type: 'Project', id: formData.get('projectId') as string },
       ],
     }),
+    decideChangeOrder: builder.mutation<any, { projectId: string; changeOrderId: string; isApproved: boolean }>({
+      query: ({ projectId, changeOrderId, isApproved }) => ({
+        url: `/projects/${projectId}/change-orders/${changeOrderId}/decide`,
+        method: 'POST',
+        body: { isApproved },
+      }),
+      invalidatesTags: (result, error, { projectId }) => [
+        { type: 'Project', id: projectId },
+      ],
+    }),
   }),
 });
 
-export const { useGetMyProjectsQuery, useGetProjectByIdQuery, useUploadDocumentMutation } = projectsApi;
+export const { useGetMyProjectsQuery, useGetProjectByIdQuery, useUploadDocumentMutation, useDecideChangeOrderMutation } = projectsApi;
