@@ -7,6 +7,7 @@ import { UploadDocumentModal } from '@/components/ui/UploadDocumentModal';
 
 import { useGetProjectByIdQuery, useDecideChangeOrderMutation } from '@/redux/features/projects/projectsApi';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+import { generateChangeOrderPDF } from '@/utils/generateChangeOrderPDF';
 
 // ── Status tracker data (mirrors build_portal.py exactly) ───────────────────
 const mapStatusToState = (status: string) => {
@@ -68,6 +69,7 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
 
   const [tab, setTab] = useState('status');
   const [selectedQuote, setSelectedQuote] = useState<any>(null);
+  const [selectedCO, setSelectedCO] = useState<any>(null);
   const [processingCO, setProcessingCO] = useState<{ id: string, type: 'approve' | 'decline' } | null>(null);
 
   const [decideChangeOrderMutation] = useDecideChangeOrderMutation();
@@ -449,7 +451,7 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
       {project?.changeOrders?.length > 0 ? project.changeOrders.map((co: any) => (
         <React.Fragment key={co.changeOrderId}>
           {co.status === 'PENDING' && (
-            <div className="inv-row co-row co-pending">
+            <div className="inv-row co-row co-pending" onClick={() => setSelectedCO(co)} style={{ cursor: 'pointer' }}>
               <span className="inv-num">{co.number}</span>
               <div className="inv-for">
                 {co.title}
@@ -460,7 +462,7 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
               <div className="co-actions">
                 <button 
                   className="co-btn decline" 
-                  onClick={() => handleDecideCO(co.changeOrderId, false)}
+                  onClick={(e) => { e.stopPropagation(); handleDecideCO(co.changeOrderId, false); }}
                   disabled={processingCO?.id === co.changeOrderId}
                   style={{ opacity: processingCO?.id === co.changeOrderId ? 0.6 : 1, cursor: processingCO?.id === co.changeOrderId ? 'not-allowed' : 'pointer' }}
                 >
@@ -468,7 +470,7 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
                 </button>
                 <button 
                   className="co-btn approve" 
-                  onClick={() => handleDecideCO(co.changeOrderId, true)}
+                  onClick={(e) => { e.stopPropagation(); handleDecideCO(co.changeOrderId, true); }}
                   disabled={processingCO?.id === co.changeOrderId}
                   style={{ opacity: processingCO?.id === co.changeOrderId ? 0.6 : 1, cursor: processingCO?.id === co.changeOrderId ? 'not-allowed' : 'pointer' }}
                 >
@@ -478,7 +480,7 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
             </div>
           )}
           {co.status === 'APPROVED' && (
-            <a className="inv-row co-row" href="#" onClick={e=>e.preventDefault()}>
+            <a className="inv-row co-row" href="#" onClick={e=>{e.preventDefault(); setSelectedCO(co);}}>
               <span className="inv-num">{co.number}</span>
               <div className="inv-for">
                 {co.title}
@@ -489,7 +491,7 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
             </a>
           )}
           {co.status === 'DECLINED' && (
-            <a className="inv-row co-row declined-row" href="#" onClick={e=>e.preventDefault()}>
+            <a className="inv-row co-row declined-row" href="#" onClick={e=>{e.preventDefault(); setSelectedCO(co);}}>
               <span className="inv-num">{co.number}</span>
               <div className="inv-for">
                 {co.title}
@@ -614,6 +616,54 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
                 Open in calculator
               </Link>
             </div>
+            </>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={!!selectedCO} onOpenChange={(open) => !open && setSelectedCO(null)}>
+        <DialogContent style={{ borderRadius: 16, padding: '32px', maxWidth: '440px', border: 'none', background: '#fff' }}>
+          {selectedCO && (
+            <>
+            <DialogHeader style={{ marginBottom: 12 }}>
+              <DialogTitle style={{ fontSize: 16, fontWeight: 700 }}>{selectedCO.number}</DialogTitle>
+            </DialogHeader>
+
+            <div style={{ fontSize: 36, fontWeight: 900, marginBottom: 24 }}>
+              {selectedCO.status !== 'DECLINED' ? '+' : ''}${parseFloat(selectedCO.amount || 0).toLocaleString()}
+            </div>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 16, fontSize: 13, marginBottom: 32 }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid var(--border)', paddingBottom: 12 }}>
+                <span style={{ fontSize: 11, color: 'var(--tx-sub)', textTransform: 'uppercase', letterSpacing: 1 }}>Change Order</span>
+                <span style={{ fontWeight: 600 }}>{selectedCO.number}</span>
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid var(--border)', paddingBottom: 12 }}>
+                <span style={{ fontSize: 11, color: 'var(--tx-sub)', textTransform: 'uppercase', letterSpacing: 1 }}>Scope</span>
+                <span style={{ fontWeight: 600, textAlign: 'right', maxWidth: '65%' }}>{selectedCO.title || 'N/A'}</span>
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid var(--border)', paddingBottom: 12 }}>
+                <span style={{ fontSize: 11, color: 'var(--tx-sub)', textTransform: 'uppercase', letterSpacing: 1 }}>Status</span>
+                <span style={{ fontWeight: 600 }}>{
+                  selectedCO.status === 'APPROVED' ? 'Approved' :
+                  selectedCO.status === 'DECLINED' ? 'Declined' :
+                  selectedCO.status === 'PENDING' ? 'Pending' :
+                  selectedCO.status
+                }</span>
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid var(--border)', paddingBottom: 12 }}>
+                <span style={{ fontSize: 11, color: 'var(--tx-sub)', textTransform: 'uppercase', letterSpacing: 1 }}>Date</span>
+                <span style={{ fontWeight: 600 }}>{new Date(selectedCO.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</span>
+              </div>
+            </div>
+
+            <button 
+              className="btn-solid" 
+              onClick={() => generateChangeOrderPDF(project, selectedCO)}
+              style={{ width: '100%', background: '#0F2228', color: '#fff', fontWeight: 700, fontSize: 15, padding: '14px 22px', borderRadius: 12, border: 'none', cursor: 'pointer' }}
+            >
+              Download PDF
+            </button>
             </>
           )}
         </DialogContent>

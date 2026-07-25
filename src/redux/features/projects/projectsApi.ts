@@ -1,6 +1,7 @@
 import { baseApi } from '../../api/baseApi';
 
 export const projectsApi = baseApi.injectEndpoints({
+  overrideExisting: true,
   endpoints: (builder) => ({
     getMyProjects: builder.query<any, void>({
       query: () => '/projects',
