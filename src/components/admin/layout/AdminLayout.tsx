@@ -12,6 +12,7 @@ const adminNavItems = [
   { name: 'Partners', href: '/admin/partners', icon: 'nav_account' },
   { name: 'Projects', href: '/admin/projects', icon: 'nav_dashboard' },
   { name: 'Pricing', href: '/admin/pricing', icon: 'nav_account' },
+  { name: 'Settings', href: '/admin/settings', icon: 'nav_account' },
 ];
 
 export function AdminLayout({ children }: { children: React.ReactNode }) {

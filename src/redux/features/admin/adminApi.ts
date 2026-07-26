@@ -1,102 +1,155 @@
-import { baseApi } from '../../api/baseApi';
+import { baseApi } from "../../api/baseApi";
 
 export const adminApi = baseApi.injectEndpoints({
   endpoints: (builder) => ({
     getPartners: builder.query<any, void>({
-      query: () => '/admin/partners',
-      providesTags: ['Partners'],
+      query: () => "/admin/partners",
+      providesTags: ["Partners"],
     }),
     getPartnerById: builder.query<any, string>({
       query: (companyId) => `/admin/partners/${companyId}`,
-      providesTags: (result, error, id) => [{ type: 'Partners', id }],
+      providesTags: (result, error, id) => [{ type: "Partners", id }],
     }),
     getSTCustomers: builder.query<any, void>({
-      query: () => '/admin/st-customers',
+      query: () => "/admin/st-customers",
     }),
-    assignSTCustomer: builder.mutation<any, { companyId: string; serviceTitanCustomerId: string }>({
+    assignSTCustomer: builder.mutation<
+      any,
+      { companyId: string; serviceTitanCustomerId: string }
+    >({
       query: ({ companyId, serviceTitanCustomerId }) => ({
         url: `/admin/partners/${companyId}/st-customers`,
-        method: 'POST',
+        method: "POST",
         body: { serviceTitanCustomerId },
       }),
-      invalidatesTags: ['Partners'],
+      invalidatesTags: ["Partners"],
     }),
-    removeSTCustomer: builder.mutation<any, { companyId: string; stCustomerId: string }>({
+    removeSTCustomer: builder.mutation<
+      any,
+      { companyId: string; stCustomerId: string }
+    >({
       query: ({ companyId, stCustomerId }) => ({
         url: `/admin/partners/${companyId}/st-customers/${stCustomerId}`,
-        method: 'DELETE',
+        method: "DELETE",
       }),
-      invalidatesTags: ['Partners'],
+      invalidatesTags: ["Partners"],
     }),
     getAllProjects: builder.query<any, void>({
-      query: () => '/admin/projects',
-      providesTags: ['Project'],
+      query: () => "/admin/projects",
+      providesTags: ["Project"],
     }),
-    updateProjectPhase: builder.mutation<any, { projectId: string; currentPhaseIndex: number; currentPhase: string; phaseClass: string }>({
+    updateProjectPhase: builder.mutation<
+      any,
+      {
+        projectId: string;
+        currentPhaseIndex: number;
+        currentPhase: string;
+        phaseClass: string;
+      }
+    >({
       query: ({ projectId, ...body }) => ({
         url: `/admin/projects/${projectId}/phase`,
-        method: 'PATCH',
+        method: "PATCH",
         body,
       }),
-      invalidatesTags: ['Project'],
+      invalidatesTags: ["Project"],
     }),
     getProjectById: builder.query<any, string>({
       query: (projectId) => `/admin/projects/${projectId}`,
-      providesTags: (result, error, id) => [{ type: 'Project', id }],
+      providesTags: (result, error, id) => [{ type: "Project", id }],
     }),
-    updateTaskStatus: builder.mutation<any, { projectId: string; taskId: string; status: string }>({
+    updateTaskStatus: builder.mutation<
+      any,
+      { projectId: string; taskId: string; status: string }
+    >({
       query: ({ projectId, taskId, status }) => ({
         url: `/admin/projects/${projectId}/tasks/${taskId}/status`,
-        method: 'PATCH',
+        method: "PATCH",
         body: { status },
       }),
-      invalidatesTags: (result, error, { projectId }) => [{ type: 'Project', id: projectId }],
+      invalidatesTags: (result, error, { projectId }) => [
+        { type: "Project", id: projectId },
+      ],
     }),
-    updatePartnerTier: builder.mutation<any, { companyId: string; tier: number }>({
+    updatePartnerTier: builder.mutation<
+      any,
+      { companyId: string; tier: number }
+    >({
       query: ({ companyId, tier }) => ({
         url: `/admin/partners/${companyId}/tier`,
-        method: 'PATCH',
+        method: "PATCH",
         body: { tier },
       }),
-      invalidatesTags: (result, error, { companyId }) => [{ type: 'Partners', id: companyId }, 'Partners'],
+      invalidatesTags: (result, error, { companyId }) => [
+        { type: "Partners", id: companyId },
+        "Partners",
+      ],
     }),
     getPartnerQuotes: builder.query<any, string>({
       query: (companyId) => `/admin/partners/${companyId}/quotes`,
-      providesTags: (result, error, id) => [{ type: 'Partners', id: `quotes-${id}` }],
+      providesTags: (result, error, id) => [
+        { type: "Partners", id: `quotes-${id}` },
+      ],
     }),
-    uploadAdminDocument: builder.mutation<any, { projectId: string; file: File; category: string }>({
+    uploadAdminDocument: builder.mutation<
+      any,
+      { projectId: string; file: File; category: string }
+    >({
       query: ({ projectId, file, category }) => {
         const formData = new FormData();
-        formData.append('category', category);
-        formData.append('file', file);
+        formData.append("category", category);
+        formData.append("file", file);
         return {
           url: `/admin/projects/${projectId}/documents`,
-          method: 'POST',
+          method: "POST",
           body: formData,
         };
       },
-      invalidatesTags: (result, error, { projectId }) => [{ type: 'Project', id: projectId }],
+      invalidatesTags: (result, error, { projectId }) => [
+        { type: "Project", id: projectId },
+      ],
     }),
-    uploadAdminPhoto: builder.mutation<any, { projectId: string; file: File; phase: string }>({
+    uploadAdminPhoto: builder.mutation<
+      any,
+      { projectId: string; file: File; phase: string }
+    >({
       query: ({ projectId, file, phase }) => {
         const formData = new FormData();
-        formData.append('phase', phase);
-        formData.append('file', file);
+        formData.append("phase", phase);
+        formData.append("file", file);
         return {
           url: `/admin/projects/${projectId}/photos`,
-          method: 'POST',
+          method: "POST",
           body: formData,
         };
       },
-      invalidatesTags: (result, error, { projectId }) => [{ type: 'Project', id: projectId }],
+      invalidatesTags: (result, error, { projectId }) => [
+        { type: "Project", id: projectId },
+      ],
     }),
     getAdminDocuments: builder.query<any, string>({
       query: (projectId) => `/admin/projects/${projectId}/documents`,
-      providesTags: (result, error, projectId) => [{ type: 'Project', id: projectId }],
+      providesTags: (result, error, projectId) => [
+        { type: "Project", id: projectId },
+      ],
     }),
     getAdminPhotos: builder.query<any, string>({
       query: (projectId) => `/admin/projects/${projectId}/photos`,
-      providesTags: (result, error, projectId) => [{ type: 'Project', id: projectId }],
+      providesTags: (result, error, projectId) => [
+        { type: "Project", id: projectId },
+      ],
+    }),
+    getSystemConfig: builder.query<any, void>({
+      query: () => "/admin/config",
+      providesTags: ["Config"],
+    }),
+    updateSystemConfig: builder.mutation<any, { key: string; value: string }>({
+      query: (body) => ({
+        url: "/admin/config",
+        method: "PATCH",
+        body,
+      }),
+      invalidatesTags: ["Config"],
     }),
   }),
 });
@@ -117,5 +170,6 @@ export const {
   useUploadAdminPhotoMutation,
   useGetAdminDocumentsQuery,
   useGetAdminPhotosQuery,
+  useGetSystemConfigQuery,
+  useUpdateSystemConfigMutation,
 } = adminApi;
-
