@@ -1,10 +1,12 @@
 'use client';
 
-import React from 'react';
-import { Icons } from '@/components/ui/Icons';
+import React, { useMemo, useState } from 'react';
 import { useGetMyInvoicesQuery } from '@/redux/features/invoices/invoicesApi';
+import { Icons } from '@/components/ui/Icons';
+import { InvoiceDetailsModal } from '@/components/dashboard/InvoiceDetailsModal';
 
 export default function InvoicesPage() {
+  const [selectedInvoiceId, setSelectedInvoiceId] = useState<string | null>(null);
   const { data: response, isLoading } = useGetMyInvoicesQuery(undefined);
 
   if (isLoading) {
@@ -90,7 +92,13 @@ export default function InvoicesPage() {
               const dateText = `Issued ${new Date(inv.createdAt).toLocaleDateString('en-US', {month: 'short', day: 'numeric', year: 'numeric'})}`;
               
               return (
-                <a key={inv.invoiceId} className="inv-row" href="#" onClick={e => e.preventDefault()}>
+                <a 
+                  key={inv.invoiceId} 
+                  className="inv-row" 
+                  href="#" 
+                  onClick={e => { e.preventDefault(); setSelectedInvoiceId(inv.invoiceId); }}
+                  style={{ cursor: 'pointer' }}
+                >
                   <span className="inv-num">INV-{inv.invoiceNumber}</span>
                   <div className="inv-for">
                     {inv.description || 'Job Invoice'}
@@ -100,6 +108,9 @@ export default function InvoicesPage() {
                   </div>
                   <span className="inv-amount">${parseFloat(inv.amount || '0').toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                   <span className={`inv-badge ${isOverdue ? 'overdue' : 'due'}`}>{isOverdue ? 'Overdue' : 'Due'}</span>
+                  <span style={{ color: '#666', marginLeft: '8px' }}>
+                    <Icons.chev style={{ width: 16, height: 16 }} />
+                  </span>
                 </a>
               );
             })}
@@ -116,7 +127,13 @@ export default function InvoicesPage() {
         <div style={{color:'#666', fontSize:'14px', marginTop:'8px'}}>No recently paid invoices.</div>
       ) : (
         paidInvoices.map((inv: any) => (
-          <a key={inv.invoiceId} className="inv-row" href="#" onClick={e => e.preventDefault()}>
+          <a 
+            key={inv.invoiceId} 
+            className="inv-row" 
+            href="#" 
+            onClick={e => { e.preventDefault(); setSelectedInvoiceId(inv.invoiceId); }}
+            style={{ cursor: 'pointer' }}
+          >
             <span className="inv-num">INV-{inv.invoiceNumber}</span>
             <div className="inv-for">
               {inv.description || 'Job Invoice'} &middot; {inv.project?.address || 'Unknown Project'}
@@ -124,9 +141,18 @@ export default function InvoicesPage() {
             </div>
             <span className="inv-amount">${parseFloat(inv.amount || '0').toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
             <span className="inv-badge paid">Paid</span>
+            <span style={{ color: '#666', marginLeft: '8px' }}>
+              <Icons.chev style={{ width: 16, height: 16 }} />
+            </span>
           </a>
         ))
       )}
+
+      <InvoiceDetailsModal 
+        isOpen={!!selectedInvoiceId} 
+        onClose={() => setSelectedInvoiceId(null)} 
+        invoiceId={selectedInvoiceId} 
+      />
     </>
   );
 }

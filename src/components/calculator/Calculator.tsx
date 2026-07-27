@@ -157,6 +157,12 @@ export default function Calculator({ projectId, quoteId }: { projectId?: string;
   };
 
   const handleReset = () => {
+    const unwrappedProfile = userProfile?.data || userProfile;
+    const customers = unwrappedProfile?.company?.stCustomers || [];
+    const firstCustomer = customers[0];
+    const tier = unwrappedProfile?.company?.tier || 4;
+    const anchor = TIER_ANCHORS[tier] || 16500;
+
     const quoteDate = new Date();
     const expiry = new Date();
     expiry.setDate(expiry.getDate() + 30);
@@ -167,6 +173,10 @@ export default function Calculator({ projectId, quoteId }: { projectId?: string;
     };
     setProject({
       ...defaultProject,
+      builder: firstCustomer ? (firstCustomer.serviceTitanName || "Unknown Builder") : "No Builder Assigned",
+      stCustomerId: firstCustomer ? firstCustomer.serviceTitanCustomerId : undefined,
+      tier,
+      anchor,
       quoteNumber: `RA-${Math.floor(100000 + Math.random() * 900000)}`,
       quoteDate: quoteDate.toLocaleDateString("en-US", dateOptions),
       quoteExpiry: expiry.toLocaleDateString("en-US", dateOptions),

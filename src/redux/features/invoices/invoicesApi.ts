@@ -6,7 +6,11 @@ export const invoicesApi = baseApi.injectEndpoints({
       query: () => '/invoices',
       providesTags: ['Invoice'],
     }),
+    getInvoiceDetails: builder.query<any, string>({
+      query: (invoiceId) => `/invoices/${invoiceId}/details`,
+      providesTags: (result, error, arg) => [{ type: 'Invoice', id: arg }],
+    }),
   }),
 });
 
-export const { useGetMyInvoicesQuery } = invoicesApi;
+export const { useGetMyInvoicesQuery, useGetInvoiceDetailsQuery } = invoicesApi;
