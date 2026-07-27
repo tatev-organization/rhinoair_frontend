@@ -290,8 +290,8 @@
   .est-total .tval { font-size:38px; font-weight:900; letter-spacing:-0.02em; line-height:1; color:var(--rhino-bright); }
   .est-actions { margin-top:22px; display:flex; gap:10px; }
   .btn { flex:1; padding:14px; border-radius:11px; border:none; font-family:'Archivo',sans-serif; font-weight:700; font-size:14px; cursor:pointer; transition:0.15s; }
-  .btn-primary { background:var(--rhino-bright); color:var(--ink); }
-  .btn-primary:hover { background:#fff; }
+  .est-actions .btn-primary { background:var(--rhino-bright); color:var(--ink); }
+  .est-actions .btn-primary:hover { background:#fff; }
   .est-actions .btn-ghost { background:transparent; color:var(--paper); border:1.5px solid #3a4d52; }
   .est-actions .btn-ghost:hover { border-color:var(--rhino-bright); color:var(--rhino-bright); }
   .est-contact { margin-top:22px; padding-top:18px; border-top:1px solid #2a3d42; }

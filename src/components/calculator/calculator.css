@@ -1829,11 +1829,11 @@ button.cond-row.active .cond-price-sm {
   cursor: pointer;
   transition: 0.15s;
 }
-.btn-primary {
+.est-actions .btn-primary {
   background: var(--rhino-bright);
   color: var(--ink);
 }
-.btn-primary:hover {
+.est-actions .btn-primary:hover {
   background: #fff;
 }
 .est-actions .btn-ghost {
