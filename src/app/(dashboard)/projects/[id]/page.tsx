@@ -28,14 +28,16 @@ const stateWord: Record<string, string> = {
   notstarted: 'Not started',
 };
 
-function StBar({ state, pidx }: { state: string; pidx: number }) {
+function StBar({ state }: { state: string }) {
   return (
     <div className="st-bar">
-      {[0,1,2,3].map(k => {
+      {[0, 1, 2, 3].map((k) => {
         let cls = '';
-        if (state !== 'notstarted') {
-          if (k < pidx) cls = ' green';
-          else if (k === pidx) cls = ' green' + (state === 'inprogress' ? ' pulse' : '');
+        if (state === 'complete') {
+          cls = ' green';
+        } else if (state === 'inprogress') {
+          if (k < 1) cls = ' green';
+          else if (k === 1) cls = ' green pulse';
         }
         return <span key={k} className={`st-seg${cls}`}></span>;
       })}
@@ -52,7 +54,7 @@ function StItem({ name, state, pidx }: { name: string; state: string; pidx: numb
         {stateWord[state]}
         {isInspection && <span className="st-tag">Scheduled by GC</span>}
       </span>
-      <StBar state={state} pidx={pidx} />
+      <StBar state={state} />
     </div>
   );
 }
