@@ -394,7 +394,7 @@ export default function SystemCard({
             <div className="cond-name">{condLabel}</div>
             <div className="cond-sub">{condSub}</div>
           </div>
-          <div className="cond-incl">Included</div>
+          <div className="cond-incl">{formatPrice(condenserAmt)}</div>
         </div>
         <div className="sub-label">Indoor heads ({heads.length})</div>
         <div className="heads-list">
