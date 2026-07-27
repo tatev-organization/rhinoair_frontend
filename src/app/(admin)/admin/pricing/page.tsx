@@ -206,6 +206,30 @@ export default function AdminPricingPage() {
                       />
                     </div>
                   )}
+                  {addon.segs && (
+                    <div style={{ marginTop: 10 }}>
+                      <label style={{ display: "block", fontFamily: "var(--font-mono)", fontSize: 10.5, letterSpacing: "0.08em", textTransform: "uppercase", color: "var(--muted)", marginBottom: 12 }}>Segment Rates</label>
+                      <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+                        {addon.segs.map((seg: any, sIndex: number) => (
+                          <div key={sIndex} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", background: "var(--paper-2)", padding: "10px 14px", borderRadius: 10 }}>
+                            <span style={{ fontSize: 14, fontWeight: 600 }}>{seg.tier || seg.ttl}</span>
+                            <div className="field" style={{ marginBottom: 0, width: 100 }}>
+                              <input
+                                type="number"
+                                style={{ padding: "8px 12px", fontSize: 14 }}
+                                value={seg.rate}
+                                onChange={(e) => {
+                                  const newSegs = [...addon.segs];
+                                  newSegs[sIndex] = { ...newSegs[sIndex], rate: Number(e.target.value) };
+                                  handleSystemAddonChange(index, "segs", newSegs);
+                                }}
+                              />
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
                 </div>
               ))}
             </div>

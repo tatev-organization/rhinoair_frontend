@@ -256,7 +256,10 @@ export function addonLineTotal(
   if (def.type === "flat") return flatRate(def, sys);
   if (def.type === "persystem")
     return (def.rate || 0) * Math.max(systemsLength, 1);
-  if (def.type === "radiogroup") return a.segRate || 0;
+  if (def.type === "radiogroup") {
+    const match = def.segs?.find((sg) => sg.tier === a.segTier) || def.segs?.[0];
+    return match?.rate || 0;
+  }
   if (def.type === "multirow") {
     let t = 0;
     def.rows?.forEach((r) => {

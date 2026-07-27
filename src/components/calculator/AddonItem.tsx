@@ -43,7 +43,7 @@ export default function AddonItem({
   if (def.type === "radiogroup") {
     const segs = def.segs?.map((sg, i) => {
       const act = on
-        ? a.segRate === sg.rate || (a.segRate == null && i === 0)
+        ? (a.segTier ? a.segTier === sg.tier : i === 0)
         : i === 0;
       return (
         <button
@@ -53,7 +53,7 @@ export default function AddonItem({
           onClick={() => handleSegClick(sg.rate, sg.tier)}
         >
           <div className="seg-ttl">{sg.ttl}</div>
-          <div className="seg-price">{sg.price}</div>
+          <div className="seg-price">+${(sg.rate || 0).toLocaleString("en-US")}</div>
         </button>
       );
     });
@@ -167,7 +167,13 @@ export default function AddonItem({
   const tagTxt =
     sys && isDuctless(sys) && def.ductlessRate != null
       ? `$${def.ductlessRate.toLocaleString("en-US")} / system`
-      : def.tag;
+      : def.type === "radiogroup" && def.segs?.length
+        ? `from $${(def.segs[0].rate || 0).toLocaleString("en-US")}`
+        : def.type === "multirow"
+          ? def.tag
+          : def.rate != null
+            ? `$${def.rate.toLocaleString("en-US")} ${def.unit ? `per ${def.unit}` : def.tag ? def.tag.replace(/^[0-9$,]+\s*/, '') : ''}`
+            : def.tag;
 
   return (
     <div className={`addon ${on ? "on" : ""}`}>
