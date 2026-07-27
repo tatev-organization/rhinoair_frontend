@@ -91,26 +91,19 @@ export function PartnerQuotesTable({ companyId }: { companyId: string }) {
                 {expandedQuoteId === quote.quoteId && (
                   <tr style={{ backgroundColor: '#f8fafc', borderBottom: '2px solid #e2e8f0' }}>
                     <td colSpan={6} style={{ padding: '24px' }}>
-                      <h4 style={{ margin: '0 0 12px 0', fontSize: '0.875rem', color: '#475569', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Quote Payload Systems</h4>
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                        {quote.payload?.systems?.map((sys: any, idx: number) => (
-                          <div key={idx} style={{ padding: '16px', backgroundColor: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '8px' }}>
-                            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
-                              <strong style={{ color: '#0f172a' }}>System {sys.id}: {sys.name || 'Unnamed'}</strong>
-                              <span style={{ fontSize: '0.875rem', color: '#64748b', textTransform: 'capitalize' }}>
-                                {sys.brand} • {sys.tier} Tier • {sys.tons} Tons
-                              </span>
-                            </div>
-                            <div style={{ fontSize: '0.875rem', color: '#475569' }}>
-                              Type: {sys.sysType}
-                              {sys.notes && <div style={{ marginTop: 4 }}><em>Notes: {sys.notes}</em></div>}
-                            </div>
-                          </div>
-                        ))}
-                        {(!quote.payload?.systems || quote.payload.systems.length === 0) && (
-                          <div style={{ color: '#64748b', fontSize: '0.875rem' }}>No system details available in payload.</div>
-                        )}
-                      </div>
+                      <h4 style={{ margin: '0 0 12px 0', fontSize: '0.875rem', color: '#475569', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Full Quote Payload (Calculation Details)</h4>
+                      <pre style={{ 
+                        backgroundColor: '#1e293b', 
+                        color: '#f8fafc', 
+                        padding: '16px', 
+                        borderRadius: '8px', 
+                        overflowX: 'auto', 
+                        fontSize: '0.875rem', 
+                        fontFamily: 'monospace',
+                        margin: 0
+                      }}>
+                        {JSON.stringify(quote.payload, null, 2)}
+                      </pre>
                     </td>
                   </tr>
                 )}

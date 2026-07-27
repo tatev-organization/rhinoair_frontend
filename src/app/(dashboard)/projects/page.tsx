@@ -60,7 +60,10 @@ function ProjCard({
 }
 
 export default function ProjectsPage() {
-  const { data: projects, isLoading } = useGetMyProjectsQuery();
+  const { data: projects, isLoading } = useGetMyProjectsQuery(undefined, {
+    pollingInterval: 15000, // Poll every 15 seconds to simulate live ST updates
+    refetchOnFocus: true,
+  });
 
   if (isLoading) {
     return <div style={{ padding: 40, textAlign: 'center' }}>Loading projects...</div>;
@@ -70,8 +73,10 @@ export default function ProjectsPage() {
 
   const activeProjects = projectList.filter((p: any) => p.status === 'ACTIVE' && p.currentPhaseIndex < 3) || [];
   const completedProjects = projectList.filter((p: any) => p.status === 'COMPLETED' || p.currentPhaseIndex === 3) || [];
-  // For now, if there are quotes, we can map them, otherwise we just use a static mock or empty
-  const quotedProjects = projectList.filter((p: any) => p.status === 'QUOTED') || [];
+  const quotedProjectsRaw = projectList.filter((p: any) => p.status === 'QUOTED') || [];
+  
+  // We no longer manually deduplicate here because the backend handles merging orphaned quotes securely.
+  const quotedProjects = quotedProjectsRaw;
 
   return (
     <>
@@ -109,7 +114,7 @@ export default function ProjectsPage() {
                 phaseCls={p.phaseClass || 'planning'}
                 cur={p.currentPhaseIndex || 0}
                 docs={p._count?.documents || 0}
-                stName={`ST Account: ${p.company?.name || 'Unknown'}`}
+                stName={p.builderName ? `ST Account: ${p.builderName}` : 'Single-family residence'}
               />
             ))}
           </section>
@@ -128,8 +133,8 @@ export default function ProjectsPage() {
                 sub={p.address || `ST Project ${p.serviceTitanProjectId}`}
                 phase="Quoted"
                 phaseCls="quoted"
-                price={`$${p.quotedPrice || '0.00'}`}
-                docRef={p.quoteNumber}
+                price={`$${p.quotedPrice || p.quotes?.[0]?.total || '0.00'}`}
+                docRef={p.quoteNumber || p.quotes?.[0]?.quoteNumber}
                 quoted
               />
             ))}

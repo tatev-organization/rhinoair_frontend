@@ -62,7 +62,10 @@ function StItem({ name, state, pidx }: { name: string; state: string; pidx: numb
 // ── Change-order state ───────────────────────────────────────────────────────
 export default function ProjectDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const unwrappedParams = React.use(params);
-  const { data: response, isLoading } = useGetProjectByIdQuery(unwrappedParams.id);
+  const { data: response, isLoading } = useGetProjectByIdQuery(unwrappedParams.id, {
+    pollingInterval: 15000,
+    refetchOnFocus: true,
+  });
   const project = response?.data;
   
   // Upload modal state

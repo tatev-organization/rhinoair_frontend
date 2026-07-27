@@ -4,15 +4,20 @@ import React from 'react';
 import Link from 'next/link';
 import { Icons } from '@/components/ui/Icons';
 import { ProjectCard } from '@/components/ui/ProjectCard';
-import { activeProjects } from '@/lib/dummyData';
 import { useGetMeQuery } from '@/redux/features/auth/authApi';
 import { useGetDashboardDataQuery } from '@/redux/features/dashboard/dashboardApi';
 import { useGetMyProjectsQuery } from '@/redux/features/projects/projectsApi';
 
 export default function DashboardPage() {
   const { data: userProfile, isLoading: isUserLoading } = useGetMeQuery(undefined);
-  const { data: dashboardResponse, isLoading: isDashboardLoading } = useGetDashboardDataQuery();
-  const { data: projectsResponse, isLoading: isProjectsLoading } = useGetMyProjectsQuery();
+  const { data: dashboardResponse, isLoading: isDashboardLoading } = useGetDashboardDataQuery(undefined, {
+    pollingInterval: 15000,
+    refetchOnFocus: true,
+  });
+  const { data: projectsResponse, isLoading: isProjectsLoading } = useGetMyProjectsQuery(undefined, {
+    pollingInterval: 15000,
+    refetchOnFocus: true,
+  });
 
   const company = userProfile?.data?.company || userProfile?.company;
   const companyName = company?.name || 'Loading...';
@@ -98,7 +103,8 @@ export default function DashboardPage() {
               curPhaseIdx: project.currentPhaseIndex || 0,
               docsCount: project._count?.documents || 0,
               price: project.quotedPrice ? `$${Number(project.quotedPrice).toLocaleString()}` : undefined,
-              docRef: project.quoteNumber || undefined
+              docRef: project.quoteNumber || undefined,
+              stName: project.builderName ? `ST Account: ${project.builderName}` : 'Single-family residence'
             }} />
           ))
         ) : (

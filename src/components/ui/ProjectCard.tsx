@@ -1,16 +1,27 @@
 import React from 'react';
 import Link from 'next/link';
 import { Icons } from '@/components/ui/Icons';
-import { Project } from '@/lib/dummyData';
-
 const PH4 = ["Planning", "Rough-in", "Finishing", "Final"];
+
+export interface Project {
+  id: string;
+  name: string;
+  sub: string;
+  phase: string;
+  phaseCls: string;
+  curPhaseIdx?: number;
+  docsCount?: number;
+  price?: string;
+  docRef?: string;
+  stName?: string;
+}
 
 interface ProjectCardProps {
   project: Project;
 }
 
 export function ProjectCard({ project }: ProjectCardProps) {
-  const { id, name, sub, phase, phaseCls, curPhaseIdx, docsCount, price, docRef } = project;
+  const { id, name, sub, phase, phaseCls, curPhaseIdx, docsCount, price, docRef, stName } = project;
 
   // Render the progress track
   const renderTrack = () => {
@@ -62,9 +73,9 @@ export function ProjectCard({ project }: ProjectCardProps) {
           <span><Icons.doc />{docRef} &middot; {price}</span>
         )}
         {docsCount !== undefined ? (
-          <span><Icons.home />Single-family residence</span>
+          <span><Icons.home />{stName || 'Single-family residence'}</span>
         ) : (
-          <span><Icons.home />Awaiting approval</span>
+          <span><Icons.home />{stName || 'Awaiting approval'}</span>
         )}
       </div>
     </Link>

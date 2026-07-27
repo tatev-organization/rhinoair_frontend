@@ -13,7 +13,10 @@ const PHASES = [
 ];
 
 export function AdminProjectTable() {
-  const { data: projects, isLoading } = useGetAllProjectsQuery();
+  const { data: projects, isLoading } = useGetAllProjectsQuery(undefined, {
+    pollingInterval: 15000,
+    refetchOnFocus: true,
+  });
   const [updatePhase, { isLoading: isUpdating }] = useUpdateProjectPhaseMutation();
 
   const handlePhaseChange = async (projectId: string, phaseIndex: number) => {
