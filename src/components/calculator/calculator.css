@@ -1836,12 +1836,12 @@ button.cond-row.active .cond-price-sm {
 .btn-primary:hover {
   background: #fff;
 }
-.btn-ghost {
+.est-actions .btn-ghost {
   background: transparent;
   color: var(--paper);
   border: 1.5px solid #3a4d52;
 }
-.btn-ghost:hover {
+.est-actions .btn-ghost:hover {
   border-color: var(--rhino-bright);
   color: var(--rhino-bright);
 }

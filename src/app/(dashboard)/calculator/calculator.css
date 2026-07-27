@@ -292,8 +292,8 @@
   .btn { flex:1; padding:14px; border-radius:11px; border:none; font-family:'Archivo',sans-serif; font-weight:700; font-size:14px; cursor:pointer; transition:0.15s; }
   .btn-primary { background:var(--rhino-bright); color:var(--ink); }
   .btn-primary:hover { background:#fff; }
-  .btn-ghost { background:transparent; color:var(--paper); border:1.5px solid #3a4d52; }
-  .btn-ghost:hover { border-color:var(--rhino-bright); color:var(--rhino-bright); }
+  .est-actions .btn-ghost { background:transparent; color:var(--paper); border:1.5px solid #3a4d52; }
+  .est-actions .btn-ghost:hover { border-color:var(--rhino-bright); color:var(--rhino-bright); }
   .est-contact { margin-top:22px; padding-top:18px; border-top:1px solid #2a3d42; }
   .est-contact .ec-name { font-weight:800; font-size:13px; color:#fff; }
   .est-contact a { display:inline-block; margin-right:12px; color:var(--rhino-bright); text-decoration:none; font-family:'Sometype Mono',monospace; font-size:12px; margin-top:2px; }
