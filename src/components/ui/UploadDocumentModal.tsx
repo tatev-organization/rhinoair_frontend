@@ -19,6 +19,7 @@ const CATEGORIES = [
   "Submittals & Spec Sheets",
   "Permits",
   "Certificates",
+  "Invoices",
   "Shared Files",
 ];
 
@@ -30,7 +31,7 @@ export function UploadDocumentModal({
   uploadFn,
 }: UploadDocumentModalProps) {
   const [file, setFile] = useState<File | null>(initialFile);
-  const [category, setCategory] = useState(CATEGORIES[7]); // Default to Shared Files
+  const [category, setCategory] = useState(CATEGORIES[8]); // Default to Shared Files
 
   // Default to partner portal mutation if uploadFn is not provided
   const [defaultUploadDocument, { isLoading: isDefaultLoading }] =
