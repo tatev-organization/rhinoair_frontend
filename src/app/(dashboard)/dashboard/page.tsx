@@ -18,8 +18,8 @@ export default function DashboardPage() {
   const companyName = company?.name || 'Loading...';
   const tier = company?.tier || 4;
 
-  const stats = dashboardResponse?.stats || { activeJobs: 0, openEstimates: 0, approvedJobsYtd: 0, annualGoal: 12 };
-  const alerts = dashboardResponse?.alerts || [];
+  const stats = dashboardResponse?.data?.stats || dashboardResponse?.stats || { activeJobs: 0, openEstimates: 0, approvedJobsYtd: 0, annualGoal: 12 };
+  const alerts = dashboardResponse?.data?.alerts || dashboardResponse?.alerts || [];
   
   const allProjects = projectsResponse?.data || [];
   const activeProjectsList = allProjects.filter((p: any) => p.status === 'ACTIVE' || p.status === 'IN_PROGRESS');
@@ -96,7 +96,7 @@ export default function DashboardPage() {
               phase: project.currentPhase || 'Planning',
               phaseCls: (project.phaseClass as any) || 'planning',
               curPhaseIdx: project.currentPhaseIndex || 0,
-              docsCount: project.docsCount || 0,
+              docsCount: project._count?.documents || 0,
               price: project.quotedPrice ? `$${Number(project.quotedPrice).toLocaleString()}` : undefined,
               docRef: project.quoteNumber || undefined
             }} />
