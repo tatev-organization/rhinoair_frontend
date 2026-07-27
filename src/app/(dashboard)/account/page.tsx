@@ -6,10 +6,12 @@ import { useDispatch } from 'react-redux';
 import { useRouter } from 'next/navigation';
 import { logout } from '@/redux/features/auth/authSlice';
 import { useGetMeQuery } from '@/redux/features/auth/authApi';
+import { baseApi } from '@/redux/api/baseApi';
 
 export default function AccountPage() {
   const dispatch = useDispatch();
   const router = useRouter();
+  const [isSigningOut, setIsSigningOut] = React.useState(false);
   
   const { data: userProfile } = useGetMeQuery(undefined);
   const company = userProfile?.data?.company || userProfile?.company;
@@ -22,6 +24,24 @@ export default function AccountPage() {
   const email = user?.email || '';
   const phone = company?.repPhone || user?.phone || '';
   const partnerSince = company?.partnerSince ? new Date(company.partnerSince).getFullYear() : new Date().getFullYear();
+
+  const handleSignOut = () => {
+    setIsSigningOut(true);
+    
+    // Completely terminate session
+    if (typeof window !== 'undefined') {
+      localStorage.removeItem('accessToken');
+      localStorage.removeItem('refreshToken');
+      localStorage.removeItem('role');
+    }
+    
+    // Clear Redux state & RTK Query cache
+    dispatch(baseApi.util.resetApiState());
+    dispatch(logout());
+    
+    // Force a full browser redirect to wipe memory completely
+    window.location.href = '/login';
+  };
 
   return (
     <div style={{maxWidth:'880px'}}>
@@ -147,12 +167,10 @@ export default function AccountPage() {
           <button className="btn-ghost" onClick={() => alert('Opening password change')}>Change password</button>
           <button 
             className="btn-ghost danger" 
-            onClick={() => {
-              dispatch(logout());
-              router.push('/login');
-            }}
+            onClick={handleSignOut}
+            disabled={isSigningOut}
           >
-            Sign out
+            {isSigningOut ? 'Signing out...' : 'Sign out'}
           </button>
         </div>
       </div>

@@ -63,11 +63,6 @@ const authSlice = createSlice({
       state.companyId = null;
       state.user = null;
       state.isAuthenticated = false;
-      if (typeof window !== 'undefined') {
-        localStorage.removeItem('accessToken');
-        localStorage.removeItem('refreshToken');
-        localStorage.removeItem('role');
-      }
     },
   },
 });
