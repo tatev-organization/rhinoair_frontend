@@ -87,7 +87,7 @@ export function effOf(s: SystemState) {
   return arr?.find((e) => e.id === s.tier) || arr?.[0] || { delta: 0 };
 }
 export function ductlessCfg(s: SystemState) {
-  return DUCTLESS?.[s.brand] || DUCTLESS?.goodman || { condenser: 0, multiSurcharge: 0, seer2: "", warrantyFull: "" };
+  return DUCTLESS?.[s.brand] || DUCTLESS?.goodman || { seer2: "", warrantyFull: "" };
 }
 
 export function miniTierMult(projectTier: number) {

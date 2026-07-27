@@ -89,7 +89,6 @@ export function setPricingConfig(data: any) {
     BRANDS = data.BRANDS.map((b: any) => ({
       ...b,
       tiers: data.BRAND_EFF?.[b.id] || [],
-      multi: { condRate: b.multiCondRate },
     }));
   }
   if (data.DUCTLESS) DUCTLESS = data.DUCTLESS;
