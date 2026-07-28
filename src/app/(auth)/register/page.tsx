@@ -78,9 +78,9 @@ export default function RegisterPage() {
 
   return (
     <>
-      <div className="preview-ribbon" aria-hidden="true">
+      {/* <div className="preview-ribbon" aria-hidden="true">
         <span>Preview</span>
-      </div>
+      </div> */}
       <div className="login-wrap" style={{ alignItems: 'flex-start', padding: '40px 24px', overflowY: 'auto' }}>
         <div className="login-card" style={{ margin: 'auto', maxWidth: '500px' }}>
           <img className="login-logo" src="/logo.png" alt="Rhino Air" />

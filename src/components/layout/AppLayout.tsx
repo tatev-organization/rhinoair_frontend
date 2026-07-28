@@ -29,9 +29,9 @@ export function AppLayout({ children, narrow = false }: AppLayoutProps) {
 
   return (
     <>
-      <div className="preview-ribbon" aria-hidden="true">
+      {/* <div className="preview-ribbon" aria-hidden="true">
         <span>Preview</span>
-      </div>
+      </div> */}
       <header className="topbar">
         <div className="topbar-inner">
           <Link href="/dashboard" className="brand" aria-label="Rhino Air home">

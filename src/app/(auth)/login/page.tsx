@@ -52,9 +52,9 @@ export default function LoginPage() {
 
   return (
     <>
-      <div className="preview-ribbon" aria-hidden="true">
+      {/* <div className="preview-ribbon" aria-hidden="true">
         <span>Preview</span>
-      </div>
+      </div> */}
       <div className="login-wrap">
         <div className="login-card">
           <img className="login-logo" src="/logo.png" alt="Rhino Air" />
