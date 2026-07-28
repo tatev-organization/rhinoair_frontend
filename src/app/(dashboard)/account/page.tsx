@@ -7,11 +7,13 @@ import { useRouter } from 'next/navigation';
 import { logout } from '@/redux/features/auth/authSlice';
 import { useGetMeQuery } from '@/redux/features/auth/authApi';
 import { baseApi } from '@/redux/api/baseApi';
+import { ChangePasswordModal } from '@/components/auth/ChangePasswordModal';
 
 export default function AccountPage() {
   const dispatch = useDispatch();
   const router = useRouter();
   const [isSigningOut, setIsSigningOut] = React.useState(false);
+  const [isChangePasswordOpen, setIsChangePasswordOpen] = React.useState(false);
   
   const { data: userProfile } = useGetMeQuery(undefined);
   const company = userProfile?.data?.company || userProfile?.company;
@@ -164,7 +166,7 @@ export default function AccountPage() {
       <div className="card">
         <div className="card-title">Login &amp; Security</div>
         <div className="sec-actions">
-          <button className="btn-ghost" onClick={() => alert('Opening password change')}>Change password</button>
+          <button className="btn-ghost" onClick={() => setIsChangePasswordOpen(true)}>Change password</button>
           <button 
             className="btn-ghost danger" 
             onClick={handleSignOut}
@@ -174,6 +176,11 @@ export default function AccountPage() {
           </button>
         </div>
       </div>
+
+      <ChangePasswordModal 
+        isOpen={isChangePasswordOpen} 
+        onClose={() => setIsChangePasswordOpen(false)} 
+      />
     </div>
   );
 }

@@ -24,6 +24,13 @@ export const authApi = baseApi.injectEndpoints({
         body: verificationData,
       }),
     }),
+    changePassword: builder.mutation({
+      query: (passwords) => ({
+        url: '/auth/change-password',
+        method: 'POST',
+        body: passwords,
+      }),
+    }),
     getMe: builder.query<any, string | undefined>({
       query: () => '/auth/me',
       providesTags: ['Profile'],
@@ -47,5 +54,6 @@ export const {
   useLoginMutation,
   useRegisterMutation,
   useVerifyOtpMutation,
+  useChangePasswordMutation,
   useGetMeQuery,
 } = authApi;
