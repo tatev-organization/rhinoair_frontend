@@ -46,7 +46,7 @@ export let HEAD_BTU: any[] = [];
 
 export let MINI_SETS: any[] = [];
 export let MINI_HEAD_ADDER: Record<string, number> = {};
-export let MINI_BTU_ORDER: string[] = [];
+export let MINI_BTU_ORDER: string[] = ["9k", "12k", "18k", "24k", "36k"];
 
 export let MULTI_CONDENSER: any[] = [];
 export let MULTI_HEAD: Record<string, Record<string, number>> = {};
@@ -96,6 +96,7 @@ export function setPricingConfig(data: any) {
   if (data.HEAD_BTU) HEAD_BTU = data.HEAD_BTU;
   if (data.MINI_SETS) MINI_SETS = data.MINI_SETS;
   if (data.MINI_HEAD_ADDER) MINI_HEAD_ADDER = data.MINI_HEAD_ADDER;
+  if (data.MINI_BTU_ORDER) MINI_BTU_ORDER = data.MINI_BTU_ORDER;
   if (data.MULTI_CONDENSER) MULTI_CONDENSER = data.MULTI_CONDENSER;
   if (data.MULTI_HEAD) MULTI_HEAD = data.MULTI_HEAD;
 }
