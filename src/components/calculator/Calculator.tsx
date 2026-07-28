@@ -22,7 +22,7 @@ import "./calculator.css";
 const newSystem = (id: number): SystemState => ({
   id: id,
   sysType: "ducted",
-  brand: "goodman",
+  brand: "acpro",
   tier: "standard",
   tons: 5,
   addons: {},

@@ -86,7 +86,17 @@ export default function SystemCard({
         });
       }
     }
-    update({ sysType: t, heads: newHeads });
+    let newBrand = system.brand;
+    if (t === "mini" && !["acpro", "daikin"].includes(newBrand)) newBrand = "acpro";
+    if (t === "multi" && !["acpro"].includes(newBrand)) newBrand = "acpro";
+
+    let changes: Partial<SystemState> = { sysType: t, heads: newHeads, brand: newBrand };
+
+    if (t === "mini" && newBrand !== system.brand) {
+      changes.miniId = `${newBrand}_12k`;
+    }
+
+    update(changes);
   };
 
   const formatPrice = (n: number) =>
@@ -112,11 +122,18 @@ export default function SystemCard({
   const types = SYS_TYPES || [];
 
   // --- Brand Selector ---
-  const brandOpts = (BRANDS || []).filter((b) => {
-    if (system.sysType === "mini") return b.mini;
-    if (system.sysType === "multi") return b.multi;
-    return b.ducted;
-  });
+  const BRAND_ORDER = ["acpro", "goodman", "daikin"];
+  const brandOpts = (BRANDS || [])
+    .filter((b) => {
+      if (system.sysType === "mini") return ["acpro", "daikin"].includes(b.id);
+      if (system.sysType === "multi") return ["acpro"].includes(b.id);
+      return ["acpro", "goodman", "daikin"].includes(b.id);
+    })
+    .sort((a, b) => {
+      const i = BRAND_ORDER.indexOf(a.id);
+      const j = BRAND_ORDER.indexOf(b.id);
+      return (i === -1 ? 99 : i) - (j === -1 ? 99 : j);
+    });
 
   // --- Efficiency Selector (Ducted) ---
   const activeBrand = (BRANDS || []).find((b) => b.id === system.brand);
