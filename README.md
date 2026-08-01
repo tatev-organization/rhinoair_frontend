@@ -1,11 +1,5 @@
 # Rhino Air Portal - Frontend
 
-This is the frontend application for the Rhino Air Partner Portal, built with [Next.js](https://nextjs.org/) and React.
-
-## Prerequisites
-- Node.js (v18+)
-- npm or yarn
-
 ## Getting Started
 
 1. **Install Dependencies:**
@@ -18,7 +12,6 @@ This is the frontend application for the Rhino Air Partner Portal, built with [N
    ```bash
    cp .env.example .env
    ```
-   *Note: Ensure `NEXT_PUBLIC_API_URL` points to your backend URL.*
 
 3. **Run the Development Server:**
    ```bash
@@ -31,5 +24,5 @@ This is the frontend application for the Rhino Air Partner Portal, built with [N
 ## Build for Production
 ```bash
 npm run build
-npm run start
+npm run dev
 ```
