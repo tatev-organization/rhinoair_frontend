@@ -20,9 +20,3 @@
 
 4. **Access the Application:**
    Open [http://localhost:3000](http://localhost:3000) in your browser.
-
-## Build for Production
-```bash
-npm run build
-npm run dev
-```
